@@ -52,7 +52,7 @@ monitor_docker:
     switchname: "{name}"
     monitored_conditions:
       - version
-      - containers_active
+      - containers_running
       - containers_total
       - status
       - memory
