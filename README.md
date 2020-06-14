@@ -1,6 +1,6 @@
 # Custom Monitor Docker component for Home Assistant
 
-[![maintainer](https://img.shields.io/badge/maintainer-ualex73-blue.svg?style=for-the-badge)](https://github.com/ualex73)[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
 
 ## About
 
