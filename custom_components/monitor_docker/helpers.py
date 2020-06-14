@@ -4,8 +4,6 @@ import aiodocker
 import asyncio
 import concurrent
 import logging
-import time
-import threading
 
 from datetime import datetime, timezone
 from dateutil import parser, relativedelta
@@ -15,7 +13,6 @@ from homeassistant.helpers.discovery import load_platform
 import homeassistant.util.dt as dt_util
 
 from homeassistant.const import (
-    CONF_MONITORED_CONDITIONS,
     CONF_NAME,
     CONF_SCAN_INTERVAL,
     CONF_URL,
@@ -30,7 +27,6 @@ from .const import (
     ATTR_VERSION_OS,
     ATTR_VERSION_OS_TYPE,
     COMPONENTS,
-    CONFIG,
     CONTAINER,
     CONTAINER_STATS_CPU_PERCENTAGE,
     CONTAINER_INFO_IMAGE,
@@ -56,15 +52,24 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# Bytes to MBytes
-toKB = lambda a: round(a / (1024 ** 1), PRECISION)
-toMB = lambda a: round(a / (1024 ** 2), PRECISION)
+
+def toKB(value):
+    """Converts bytes to kBytes."""
+    return round(value / (1024 ** 1), PRECISION)
+
+
+def toMB(value):
+    """Converts bytes to MBytes."""
+    return round(value / (1024 ** 2), PRECISION)
+
 
 #################################################################
 class DockerAPI:
     """Docker API abstraction allowing multiple Docker instances beeing monitored."""
 
     def __init__(self, hass, config):
+        """Initialize the Docker API."""
+
         self._hass = hass
         self._config = config
         self._containers = {}
@@ -191,7 +196,9 @@ class DockerAPI:
             while True:
                 info = await self._api.system.info()
                 self._info[DOCKER_INFO_VERSION] = info.get("ServerVersion")
-                self._info[DOCKER_INFO_CONTAINER_RUNNING] = info.get("ContainersRunning")
+                self._info[DOCKER_INFO_CONTAINER_RUNNING] = info.get(
+                    "ContainersRunning"
+                )
                 self._info[DOCKER_INFO_CONTAINER_TOTAL] = info.get("Containers")
 
                 self._info[ATTR_MEMORY_LIMIT] = info.get("MemTotal")
@@ -231,14 +238,21 @@ class DockerAPI:
                             exc_info=True,
                         )
 
-                self._info[DOCKER_STATS_CPU_PERCENTAGE] = round(
-                    self._info[DOCKER_STATS_CPU_PERCENTAGE], PRECISION
+                # Try to fix possible 0 values in history at start-up
+                self._info[DOCKER_STATS_CPU_PERCENTAGE] = (
+                    None
+                    if self._info[DOCKER_STATS_CPU_PERCENTAGE] == 0.0
+                    else round(self._info[DOCKER_STATS_CPU_PERCENTAGE], PRECISION)
                 )
-                self._info[DOCKER_STATS_MEMORY] = round(
-                    self._info[DOCKER_STATS_MEMORY], PRECISION
+                self._info[DOCKER_STATS_MEMORY] = (
+                    None
+                    if self._info[DOCKER_STATS_MEMORY] == 0.0
+                    else round(self._info[DOCKER_STATS_MEMORY], PRECISION)
                 )
-                self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = round(
-                    self._info[DOCKER_STATS_MEMORY_PERCENTAGE], PRECISION
+                self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = (
+                    None
+                    if self._info[DOCKER_STATS_MEMORY_PERCENTAGE] == 0.0
+                    else round(self._info[DOCKER_STATS_MEMORY_PERCENTAGE], PRECISION)
                 )
 
                 _LOGGER.debug(
@@ -350,7 +364,7 @@ class DockerContainerAPI:
                     _LOGGER.debug("%s: Waiting on stop/start of container", self._name)
 
                 await asyncio.sleep(self._interval)
-        except concurrent.futures._base.CancelledError as err:
+        except concurrent.futures._base.CancelledError:
             pass
         except Exception as err:
             _LOGGER.error(
@@ -364,7 +378,8 @@ class DockerContainerAPI:
     async def _run_container_info(self):
         """Get container information, but we can not get
            the uptime of this container, that is only available
-           while listing all containers :-(."""
+           while listing all containers :-(.
+        """
 
         self._info = {}
 

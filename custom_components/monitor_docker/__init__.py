@@ -9,16 +9,13 @@ from datetime import timedelta
 
 import homeassistant.helpers.config_validation as cv
 
-from homeassistant.helpers.discovery import load_platform
-
-from .helpers import DockerAPI, DockerContainerAPI
+from .helpers import DockerAPI
 
 from homeassistant.const import (
     CONF_MONITORED_CONDITIONS,
     CONF_NAME,
     CONF_SCAN_INTERVAL,
     CONF_URL,
-    EVENT_HOMEASSISTANT_STOP,
 )
 
 from .const import (
@@ -58,12 +55,13 @@ CONFIG_SCHEMA = vol.Schema(
     {DOMAIN: vol.All(cv.ensure_list, [vol.Any(DOCKER_SCHEMA)])}, extra=vol.ALLOW_EXTRA
 )
 
+
 #################################################################
 async def async_setup(hass, config):
-    """Setup the Monitor Docker platform."""
+    """Will setup the Monitor Docker platform."""
 
     def RunDocker(hass, entry):
-        """Wrapper function for a separated thread."""
+        """Wrapper around function for a separated thread."""
 
         # Create out asyncio loop, because we are already inside
         # a def (not main) we need to do create/set
@@ -74,9 +72,6 @@ async def async_setup(hass, config):
         hass.data[DOMAIN][entry[CONF_NAME]] = {}
         hass.data[DOMAIN][entry[CONF_NAME]][CONFIG] = entry
         hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(hass, entry)
-
-        # _LOGGER.error("load_platform switch")
-        # load_platform(self._hass, "switch", DOMAIN, self._config, self._config)
 
         # Now run forever in this separated thread
         loop.run_forever()

@@ -7,7 +7,6 @@ from homeassistant.components.sensor import ENTITY_ID_FORMAT
 from homeassistant.const import CONF_NAME, CONF_MONITORED_CONDITIONS
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import slugify
-import homeassistant.util.dt as dt_util
 
 from .const import (
     DOMAIN,
@@ -23,8 +22,6 @@ from .const import (
     CONF_RENAME,
     CONF_SENSORNAME,
     DOCKER_INFO_VERSION,
-    DOCKER_INFO_CONTAINER_RUNNING,
-    DOCKER_INFO_CONTAINER_TOTAL,
     CONTAINER,
     CONTAINER_INFO_NETWORKMODE,
     CONTAINER_INFO_STATE,
@@ -53,6 +50,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         DockerSensor(api, prefix, variable)
         for variable in config[CONF_MONITORED_CONDITIONS]
         if variable in DOCKER_MONITOR_LIST
+        if CONTAINER not in discovery_info
     ]
 
     # We support add/re-add of a container
@@ -164,16 +162,6 @@ class DockerSensor(Entity):
     def device_state_attributes(self):
         """Return the state attributes."""
         return self._attributes
-
-    async def async_added_to_hass(self):
-        """Register callbacks."""
-        a = 1
-        # self._api.register_callback(self.event_callback, self._var_id)
-
-    def event_callback(self, remove=False):
-        """Callback for update of container information."""
-
-        _LOGGER.error("event callback called")
 
 
 class DockerContainerSensor(Entity):
