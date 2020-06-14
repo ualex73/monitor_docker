@@ -93,3 +93,7 @@ monitor_docker:
 ## Credits
 
 * [Sanderhuisman](https://github.com/Sanderhuisman/docker_monitor)
+
+## License
+
+Apache License 2.0
