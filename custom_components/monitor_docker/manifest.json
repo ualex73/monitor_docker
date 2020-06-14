@@ -1,0 +1,7 @@
+{
+  "domain": "monitor_docker",
+  "name": "monitor_docker",
+  "documentation": "https://www.home-assistant.io/integrations/monitor_docker",
+  "requirements": ["aiodocker==0.18.8", "python-dateutil==2.8.1"],
+  "codeowners": ["@ualex73"]
+}
