@@ -34,7 +34,6 @@ monitor_docker:
       db-dsmr: "Database DSMR-Reader"
       db-hass: Database Home Assistant
       deconz: DeCONZ
-      domotiga: DomotiGa
       dsmr: "DSMR-Reader"
       hass: Home Assistant
       influxdb: InfluxDB
