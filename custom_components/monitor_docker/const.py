@@ -11,8 +11,8 @@ CONF_SENSORNAME = "sensorname"
 CONF_SWITCHNAME = "switchname"
 
 DEFAULT_NAME = "Docker"
-DEFAULT_SENSORNAME = "Docker {name} {sensorname}"
-DEFAULT_SWITCHNAME = "Docker {name}"
+DEFAULT_SENSORNAME = "{name} {sensor}"
+DEFAULT_SWITCHNAME = "{name}"
 
 COMPONENTS = ["sensor", "switch"]
 

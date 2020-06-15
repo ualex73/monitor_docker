@@ -23,9 +23,11 @@ from .const import (
     CONF_SENSORNAME,
     DOCKER_INFO_VERSION,
     CONTAINER,
+    CONTAINER_INFO_IMAGE,
     CONTAINER_INFO_NETWORKMODE,
     CONTAINER_INFO_STATE,
     CONTAINER_INFO_STATUS,
+    CONTAINER_INFO_UPTIME,
     CONTAINER_MONITOR_LIST,
     CONTAINER_MONITOR_NETWORK_LIST,
     DOCKER_MONITOR_LIST,
@@ -35,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Set up the Monitor Docker Switch."""
+    """Set up the Monitor Docker Sensor."""
 
     if discovery_info is None:
         return
@@ -108,6 +110,8 @@ class DockerSensor(Entity):
             slugify(self._prefix + "_" + self._var_name)
         )
 
+        self._name = "{name} {sensor}".format(name=self._prefix, sensor=self._var_name)
+
         self._state = None
         self._attributes = {}
 
@@ -121,7 +125,7 @@ class DockerSensor(Entity):
     @property
     def name(self):
         """Return the name of the sensor."""
-        return "{} {}".format(self._prefix, self._var_name)
+        return self._name
 
     @property
     def icon(self):
@@ -184,7 +188,9 @@ class DockerContainerSensor(Entity):
         self._entity_id = ENTITY_ID_FORMAT.format(
             slugify(self._prefix + "_" + self._cname + "_" + self._var_name)
         )
-        self._name = sensor_name_format.format(name=alias, sensorname=self._var_name)
+        self._name = sensor_name_format.format(
+            name=alias, sensorname=self._var_name, sensor=self._var_name
+        )
 
         self._state = None
         self._state_extra = None
@@ -275,7 +281,10 @@ class DockerContainerSensor(Entity):
                 self._state_extra = info.get(CONTAINER_INFO_STATE)
             elif info.get(CONTAINER_INFO_STATE) == "running":
                 if self._var_id in CONTAINER_MONITOR_LIST:
-                    state = stats.get(self._var_id)
+                    if self._var_id in [CONTAINER_INFO_STATE, CONTAINER_INFO_UPTIME, CONTAINER_INFO_IMAGE]:
+                        state = info.get(self._var_id)
+                    else:
+                        state = stats.get(self._var_id)
 
         if state != self._state:
             self._state = state

@@ -41,8 +41,6 @@ monitor_docker:
       mosquitto: Mosquitto
       nodered: "Node-RED"
       unifi: UniFi
-    sensorname: "{name}"
-    switchname: "{name}"
     monitored_conditions:
       - version
       - containers_running
@@ -61,8 +59,8 @@ monitor_docker:
 | containers           | list         (Optional)  | Array of containers to monitor. Defaults to all containers.           |
 | monitored_conditions | list         (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
 | rename               | dictionary   (Optional)  | Dictionary of containers to rename. Default no renaming.              |
-| sensorname           | string       (Optional)  | Sensor string to format the name used in Home Assistant. Defaults to `Docker {name} {sensorname}`, where `{name}` is the container name and `{sensorname}` is e.g. Memory, Status, Network speed Up |
-| switchname           | string       (optional)  | Switch string to format the name used in Home Assistant. Defaults to `Docker {name}`, where `{name}` is the container name. |
+| sensorname           | string       (Optional)  | Sensor string to format the name used in Home Assistant. Defaults to `{name} {sensor}`, where `{name}` is the container name and `{sensor}` is e.g. Memory, Status, Network speed Up |
+| switchname           | string       (optional)  | Switch string to format the name used in Home Assistant. Defaults to `{name}`, where `{name}` is the container name. |
 
 | Monitored Conditions              | Description                     | Unit  |
 | --------------------------------- | ------------------------------- | ----- |
@@ -82,6 +80,16 @@ monitor_docker:
 | network_speed_down                | Network speed downstream        | kB/s  |
 | network_total_up                  | Network total upstream          | MB    |
 | network_total_down                | Network total downstream        | MB    |
+
+### Debugging
+
+It is possible to debug the Monito Docker component, this can be done by adding the following lines to the `configuration.yaml` file:
+
+```yaml
+logger:
+  logs:
+    custom_components.monitor_docker: debug
+```
 
 ## Credits
 
