@@ -82,7 +82,7 @@ monitor_docker:
 
 ### Debugging
 
-It is possible to debug the Monito Docker component, this can be done by adding the following lines to the `configuration.yaml` file:
+It is possible to debug the Monitor Docker component, this can be done by adding the following lines to the `configuration.yaml` file:
 
 ```yaml
 logger:
