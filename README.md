@@ -97,6 +97,14 @@ logger:
     custom_components.monitor_docker: debug
 ```
 
+### Error
+Here are some possible common errors mentioned.
+
+(1) Error: `Missing valid docker_host.Either DOCKER_HOST or local sockets are not available.`
+
+(1) Cause: Most likely the socket is not mounted properly in your Home Assistant container. Please check if you added as a volume `-v /var/run/docker.sock:/var/run/docker.sock`
+
+
 ## Credits
 
 * [Sanderhuisman](https://github.com/Sanderhuisman/docker_monitor)
