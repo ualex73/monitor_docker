@@ -12,6 +12,14 @@ The Monitor Docker allows you to monitor Docker and container statistics and tur
 
 ## Installation
 
+### HACS - Recommended
+- Have [HACS](https://hacs.xyz) installed, this will allow you to easily manage and track updates.
+- Search for 'Monitor Docker'.
+- Click Install below the found integration.
+- Configure using the configuration instructions below.
+- If applicable, add the volume `/var/run/docker.sock` to your Home Assistant container.
+- Restart Home-Assistant.
+
 ### Manual
 - Copy directory `custom_components/monitor_docker` to your `<config dir>/custom_components` directory.
 - Configure with config below.
