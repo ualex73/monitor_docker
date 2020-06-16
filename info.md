@@ -53,7 +53,7 @@ monitor_docker:
 | Parameter            | Type                     | Description                                                           |
 | -------------------- | ------------------------ | --------------------------------------------------------------------- |
 | name                 | string       (Required)  | Client name of Docker daemon. Defaults to `Docker`.                   |
-| url                  | string       (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`.  |
+| url                  | string       (Optional)  | Host URL of Docker daemon. Defaults to `unix:///var/run/docker.sock`. When using a unix socket, please add 3 slashes after the `unix:` |
 | scan_interval        | time_period  (Optional)  | Update interval. Defaults to 10 seconds.                              |
 | containers           | list         (Optional)  | Array of containers to monitor. Defaults to all containers.           |
 | monitored_conditions | list         (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
@@ -89,6 +89,8 @@ logger:
   logs:
     custom_components.monitor_docker: debug
 ```
+
+###
 
 ## Credits
 
