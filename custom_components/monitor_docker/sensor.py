@@ -62,7 +62,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         clist = api.list_containers()
 
     for cname in clist:
-        if cname in config[CONF_CONTAINERS]:
+        if cname in config[CONF_CONTAINERS] or not config[CONF_CONTAINERS]:
             # Try to figure out if we should include any network sensors
             capi = api.get_container(cname)
             info = capi.get_info()
