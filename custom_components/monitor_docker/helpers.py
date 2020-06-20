@@ -170,7 +170,7 @@ class DockerAPI:
                         if self._event_create and not taskcreated:
                             self._loop.create_task(self._container_create_destroy())
 
-                    if event["Action"] == "destroy":
+                    elif event["Action"] == "destroy":
                         # Check if another task is running, ifso, we don't create a new one
                         taskcreated = (
                             True if self._event_create or self._event_destroy else False
@@ -197,6 +197,31 @@ class DockerAPI:
 
                         if self._event_destroy and not taskcreated:
                             self._loop.create_task(self._container_create_destroy())
+                    elif event["Action"] == "rename":
+                        # during a docker-compose up -d <container> the old container can be renamed
+                        # sensors/switch should be removed before the new container is monitored
+
+                        # New name
+                        cname = event["Actor"]["Attributes"]["name"]
+
+                        # Old name, and remove leading slash
+                        oname = event["Actor"]["Attributes"]["oldName"]
+                        oname = oname[1:]
+
+                        if oname in self._containers:
+                            _LOGGER.debug(
+                                "%s: Event rename container to '%s'", oname, cname
+                            )
+                            self._containers[cname] = self._containers[oname]
+                            del self._containers[oname]
+
+                            # We also need to rename the internal name
+                            self._containers[cname].set_name(cname)
+                        else:
+                            _LOGGER.error(
+                                "%s: Event rename container doesn't exist in list?",
+                                oname,
+                            )
 
         except Exception as err:
             _LOGGER.error("run_docker_events (%s)", str(err), exc_info=True)
@@ -744,6 +769,11 @@ class DockerContainerAPI:
     def get_name(self):
         """Return the container name."""
         return self._name
+
+    #############################################################
+    def set_name(self, name):
+        """Set the container name."""
+        self._name = name
 
     #############################################################
     def get_info(self):
