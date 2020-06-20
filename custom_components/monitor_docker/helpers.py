@@ -86,7 +86,15 @@ class DockerAPI:
         self._loop = asyncio.get_event_loop()
 
         try:
-            self._api = aiodocker.Docker(url=self._config[CONF_URL])
+            # Try to fix unix:// to unix:/// (3 are required by aiodocker)
+            url = self._config[CONF_URL]
+            if (
+                url is not None
+                and url.find("unix://") == 0
+                and url.find("unix:///") == -1
+            ):
+                url = url.replace("unix://", "unix:///")
+            self._api = aiodocker.Docker(url=url)
         except Exception as err:
             _LOGGER.error("Can not connect to Docker API (%s)", str(err))
             return
