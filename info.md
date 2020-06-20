@@ -86,9 +86,12 @@ monitor_docker:
 | version                           | Docker version                  | -     |
 | containers_total                  | Total number of containers      | -     |
 | containers_running                | Number of running containers    | -     |
+| containers_paused                 | Number of paused containers     | -     |
+| containers_stopped                | Number of stopped containers    | -     |
 | containers_cpu_percentage         | CPU Usage                       | %     |
 | containers_memory                 | Memory usage                    | MB    |
 | containers_memory_percentage      | Memory usage                    | %     |
+| images                            | Number of images                | -     |
 | status                            | Container status                | -     |
 | uptime                            | Container start time            | -     |
 | image                             | Container image                 | -     |
