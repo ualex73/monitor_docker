@@ -37,6 +37,7 @@ from .const import (
     CONTAINER_STATS_NETWORK_SPEED_DOWN,
     CONTAINER_STATS_NETWORK_TOTAL_UP,
     CONTAINER_STATS_NETWORK_TOTAL_DOWN,
+    DOCKER_INFO_IMAGES,
     CONTAINER_INFO_STATE,
     CONTAINER_INFO_STATUS,
     CONTAINER_INFO_UPTIME,
@@ -44,7 +45,6 @@ from .const import (
     DOCKER_INFO_CONTAINER_PAUSED,
     DOCKER_INFO_CONTAINER_STOPPED,
     DOCKER_INFO_CONTAINER_TOTAL,
-    DOCKER_INFO_IMAGES,
     DOCKER_INFO_VERSION,
     DOCKER_STATS_CPU_PERCENTAGE,
     DOCKER_STATS_MEMORY,
@@ -78,6 +78,8 @@ class DockerAPI:
         self._containers = {}
         self._tasks = {}
         self._info = {}
+        self._event_create = {}
+        self._event_destroy = {}
 
         self._interval = config[CONF_SCAN_INTERVAL].seconds
 
@@ -137,33 +139,95 @@ class DockerAPI:
         """Function to retrieve docker events. We can add or remove monitored containers."""
 
         try:
-            while True:
-                subscriber = self._api.events.subscribe()
+            subscriber = self._api.events.subscribe()
 
+            while True:
                 event = await subscriber.get()
                 if event is None:
+                    _LOGGER.error("run_docker_events loop ended")
                     break
 
                 # Only monitor container events
-                if event["Type"] == "container":
+                if event["Type"] == CONTAINER:
                     if event["Action"] == "create":
-                        cname = event["Actor"]["Attributes"]["name"]
-                        await self._container_add(cname)
+                        # Check if another task is running, ifso, we don't create a new one
+                        taskcreated = (
+                            True if self._event_create or self._event_destroy else False
+                        )
 
-                        for component in COMPONENTS:
-                            load_platform(
-                                self._hass,
-                                component,
-                                DOMAIN,
-                                {CONF_NAME: self._config[CONF_NAME], CONTAINER: cname},
-                                self._config,
+                        cname = event["Actor"]["Attributes"]["name"]
+
+                        # Add container name to containers to be monitored this has to
+                        # be a new task, otherwise it will block our event monitoring
+                        if cname not in self._event_create:
+                            _LOGGER.debug("%s: Event create container", cname)
+                            self._event_create[cname] = 0
+                        else:
+                            _LOGGER.error(
+                                "%s: Event create container, but already in working table?"
                             )
 
+                        if self._event_create and not taskcreated:
+                            self._loop.create_task(self._container_create_destroy())
+
                     if event["Action"] == "destroy":
+                        # Check if another task is running, ifso, we don't create a new one
+                        taskcreated = (
+                            True if self._event_create or self._event_destroy else False
+                        )
+
                         cname = event["Actor"]["Attributes"]["name"]
-                        await self._container_remove(cname)
+
+                        # Remove container name to containers to be monitored this has to
+                        # be a new task, otherwise it will block our event monitoring
+                        if cname in self._event_create:
+                            _LOGGER.warning(
+                                "%s: Event destroy received, but create wasn't executed yet",
+                                cname,
+                            )
+                            del self._event_create[cname]
+                        elif cname not in self._event_destroy:
+                            _LOGGER.debug("%s: Event destroy container", cname)
+                            self._event_destroy[cname] = 0
+                        else:
+                            _LOGGER.error(
+                                "%s: Event destroy container, but already in working table?",
+                                cname,
+                            )
+
+                        if self._event_destroy and not taskcreated:
+                            self._loop.create_task(self._container_create_destroy())
+
         except Exception as err:
-            _LOGGER.error(" run_docker_events (%s)", str(err), exc_info=True)
+            _LOGGER.error("run_docker_events (%s)", str(err), exc_info=True)
+
+    #############################################################
+    async def _container_create_destroy(self):
+        """Handles create or destroy of container events."""
+
+        try:
+            while self._event_create or self._event_destroy:
+
+                # Go through create loop first
+                for cname in self._event_create:
+                    if self._event_create[cname] > 2:
+                        del self._event_create[cname]
+                        await self._container_add(cname)
+                        break
+                    else:
+                        self._event_create[cname] += 1
+                else:
+                    # If all create, we can handle the destroy loop
+                    for cname in self._event_destroy:
+                        await self._container_remove(cname)
+
+                    self._event_destroy = {}
+
+                # Sleep for 1 second, don't try to create it too fast
+                await asyncio.sleep(1)
+
+        except Exception as err:
+            _LOGGER.error("container_create_destroy (%s)", str(err), exc_info=True)
 
     #############################################################
     async def _container_add(self, cname):
@@ -178,6 +242,24 @@ class DockerAPI:
         self._containers[cname] = DockerContainerAPI(
             self._api, cname, self._interval, False
         )
+
+        # We should wait until container is attached
+        result = await self._containers[cname]._initGetContainer()
+
+        if result:
+            # Lets wait 1 second before we try to create sensors/switches
+            await asyncio.sleep(1)
+
+            for component in COMPONENTS:
+                load_platform(
+                    self._hass,
+                    component,
+                    DOMAIN,
+                    {CONF_NAME: self._config[CONF_NAME], CONTAINER: cname},
+                    self._config,
+                )
+        else:
+            _LOGGER.error("%s: Problem during start of monitoring", cname)
 
     #############################################################
     async def _container_remove(self, cname):
@@ -203,7 +285,9 @@ class DockerAPI:
                     "ContainersRunning"
                 )
                 self._info[DOCKER_INFO_CONTAINER_PAUSED] = info.get("ContainersPaused")
-                self._info[DOCKER_INFO_CONTAINER_STOPPED] = info.get("ContainersStopped")
+                self._info[DOCKER_INFO_CONTAINER_STOPPED] = info.get(
+                    "ContainersStopped"
+                )
                 self._info[DOCKER_INFO_CONTAINER_TOTAL] = info.get("Containers")
                 self._info[DOCKER_INFO_IMAGES] = info.get("Images")
 
@@ -327,32 +411,40 @@ class DockerContainerAPI:
                 )
             except Exception as err:
                 _LOGGER.error(
-                    "%s: Container not available anymore (%s)",
+                    "%s: Container not available anymore (1) (%s)",
                     self._name,
                     str(err),
                     exc_info=True,
                 )
                 return
 
-        self._task = self._loop.create_task(self._run())
+            self._task = self._loop.create_task(self._run())
 
     #############################################################
-    async def _run(self):
+    async def _initGetContainer(self):
 
         # If we noticed a event=create, we need to attach here.
         # The run_until_complete doesn't work, because we are already
         # in a running loop.
-        if not self._atInit:
-            try:
-                self._container = await self._api.containers.get(self._name)
-            except Exception as err:
-                _LOGGER.error(
-                    "%s: Container not available anymore (%s)",
-                    self._name,
-                    str(err),
-                    exc_info=True,
-                )
-                return
+
+        try:
+            self._container = await self._api.containers.get(self._name)
+        except Exception as err:
+            _LOGGER.error(
+                "%s: Container not available anymore (2) (%s)",
+                self._name,
+                str(err),
+                exc_info=True,
+            )
+            return False
+
+        self._task = self._loop.create_task(self._run())
+
+        return True
+
+    #############################################################
+    async def _run(self):
+        """Loop to gather container info/stats."""
 
         try:
             while True:
@@ -374,7 +466,7 @@ class DockerContainerAPI:
             pass
         except Exception as err:
             _LOGGER.error(
-                "%s: Container not available anymore (%s)",
+                "%s: Container not available anymore (3) (%s)",
                 self._name,
                 str(err),
                 exc_info=True,

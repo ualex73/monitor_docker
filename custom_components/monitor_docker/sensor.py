@@ -257,7 +257,7 @@ class DockerContainerSensor(Entity):
         """Callback for update of container information."""
 
         if remove:
-            _LOGGER.error("%s: Removing sensor entity: %s", self._cname, self._var_id)
+            _LOGGER.info("%s: Removing sensor entity: %s", self._cname, self._var_id)
             self._loop.create_task(self.async_remove())
             return
 

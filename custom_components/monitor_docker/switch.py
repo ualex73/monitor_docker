@@ -122,7 +122,7 @@ class DockerContainerSwitch(SwitchEntity):
         """Callback for update of container information."""
 
         if remove:
-            _LOGGER.error("%s: Removing switch entity", self._cname)
+            _LOGGER.info("%s: Removing switch entity", self._cname)
             self._loop.create_task(self.async_remove())
             return
 
