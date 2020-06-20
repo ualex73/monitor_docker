@@ -41,7 +41,10 @@ from .const import (
     CONTAINER_INFO_STATUS,
     CONTAINER_INFO_UPTIME,
     DOCKER_INFO_CONTAINER_RUNNING,
+    DOCKER_INFO_CONTAINER_RUNNING,
+    DOCKER_INFO_CONTAINER_STOPPED,
     DOCKER_INFO_CONTAINER_TOTAL,
+    DOCKER_INFO_IMAGES,
     DOCKER_INFO_VERSION,
     DOCKER_STATS_CPU_PERCENTAGE,
     DOCKER_STATS_MEMORY,
@@ -199,7 +202,10 @@ class DockerAPI:
                 self._info[DOCKER_INFO_CONTAINER_RUNNING] = info.get(
                     "ContainersRunning"
                 )
+                self._info[DOCKER_INFO_CONTAINER_PAUSED] = info.get("ContainersPaused")
+                self._info[DOCKER_INFO_CONTAINER_STOPPED] = info.get("ContainersStopped")
                 self._info[DOCKER_INFO_CONTAINER_TOTAL] = info.get("Containers")
+                self._info[DOCKER_INFO_IMAGES] = info.get("Images")
 
                 self._info[ATTR_MEMORY_LIMIT] = info.get("MemTotal")
                 self._info[ATTR_ONLINE_CPUS] = info.get("NCPU")

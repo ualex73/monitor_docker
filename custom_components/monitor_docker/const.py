@@ -20,10 +20,13 @@ PRECISION = 2
 
 DOCKER_INFO_VERSION = "version"
 DOCKER_INFO_CONTAINER_RUNNING = "containers_running"
+DOCKER_INFO_CONTAINER_PAUSED = "containers_paused"
+DOCKER_INFO_CONTAINER_STOPPED = "containers_stopped"
 DOCKER_INFO_CONTAINER_TOTAL = "containers_total"
 DOCKER_STATS_CPU_PERCENTAGE = "containers_cpu_percentage"
 DOCKER_STATS_MEMORY = "containers_memory"
 DOCKER_STATS_MEMORY_PERCENTAGE = "containers_memory_percentage"
+DOCKER_INFO_IMAGES = "images"
 
 CONTAINER_INFO_STATE = "state"
 CONTAINER_INFO_STATUS = "status"
@@ -41,10 +44,13 @@ CONTAINER_STATS_NETWORK_TOTAL_DOWN = "network_total_down"
 DOCKER_MONITOR_LIST = {
     DOCKER_INFO_VERSION: ["Version", None, "mdi:information-outline", None],
     DOCKER_INFO_CONTAINER_RUNNING: ["Containers Running", None, "mdi:docker", None],
+    DOCKER_INFO_CONTAINER_PAUSED: ["Containers Paused", None, "mdi:docker", None],
+    DOCKER_INFO_CONTAINER_STOPPED: ["Containers Stopped", None, "mdi:docker", None],
     DOCKER_INFO_CONTAINER_TOTAL: ["Containers Total", None, "mdi:docker", None],
     DOCKER_STATS_CPU_PERCENTAGE: ["CPU", "%", "mdi:chip", None],
     DOCKER_STATS_MEMORY: ["Memory", "MB", "mdi:memory", None],
     DOCKER_STATS_MEMORY_PERCENTAGE: ["Memory (percent)", "%", "mdi:memory", None],
+    DOCKER_INFO_IMAGES: ["Images", None, "mdi:docker", None],
 }
 
 CONTAINER_MONITOR_LIST = {
