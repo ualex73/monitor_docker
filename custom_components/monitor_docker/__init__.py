@@ -20,6 +20,7 @@ from homeassistant.const import (
 
 from .const import (
     API,
+    CONF_CERTPATH,
     CONF_CONTAINERS,
     CONF_RENAME,
     CONF_SENSORNAME,
@@ -48,6 +49,7 @@ DOCKER_SCHEMA = vol.Schema(
         vol.Optional(CONF_RENAME, default={}): dict,
         vol.Optional(CONF_SENSORNAME, default=DEFAULT_SENSORNAME): cv.string,
         vol.Optional(CONF_SWITCHNAME, default=DEFAULT_SWITCHNAME): cv.string,
+        vol.Optional(CONF_CERTPATH, default=""): cv.string,
     }
 )
 

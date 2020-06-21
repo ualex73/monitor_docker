@@ -5,6 +5,7 @@ API = "api"
 CONFIG = "config"
 CONTAINER = "container"
 
+CONF_CERTPATH = "certpath"
 CONF_CONTAINERS = "containers"
 CONF_RENAME = "rename"
 CONF_SENSORNAME = "sensorname"

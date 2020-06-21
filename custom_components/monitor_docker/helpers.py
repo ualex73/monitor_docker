@@ -28,6 +28,7 @@ from .const import (
     ATTR_VERSION_OS,
     ATTR_VERSION_OS_TYPE,
     COMPONENTS,
+    CONF_CERTPATH,
     CONTAINER,
     CONTAINER_STATS_CPU_PERCENTAGE,
     CONTAINER_INFO_IMAGE,
@@ -110,8 +111,7 @@ class DockerAPI:
                         )
                     else:
                         _LOGGER.debug(
-                            "Docker environment set for 'DOCKER_TLS_VERIFY=%s'",
-                            tlsverify,
+                            "Docker environment set 'DOCKER_TLS_VERIFY=%s'", tlsverify
                         )
 
                     if certpath is None:
@@ -120,12 +120,20 @@ class DockerAPI:
                         )
                     else:
                         _LOGGER.debug(
-                            "Docker environment set for 'DOCKER_CERT_PATH=%s'", certpath
+                            "Docker environment set 'DOCKER_CERT_PATH=%s'", certpath
                         )
+
+                    if self._config[CONF_CERTPATH]:
+                        _LOGGER.debug(
+                            "Docker CertPath set '%s', setting environment variables DOCKER_TLS_VERIFY/DOCKER_CERT_PATH",
+                            self._config[CONF_CERTPATH],
+                        )
+                        os.environ["DOCKER_TLS_VERIFY"] = "1"
+                        os.environ["DOCKER_CERT_PATH"] = self._config[CONF_CERTPATH]
 
             self._api = aiodocker.Docker(url=url)
         except Exception as err:
-            _LOGGER.error("Can not connect to Docker API (%s)", str(err))
+            _LOGGER.error("Can not connect to Docker API (%s)", str(err), exc_info=True)
             return
 
         version = self._loop.run_until_complete(self._api.version())
