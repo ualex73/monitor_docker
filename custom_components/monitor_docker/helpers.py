@@ -4,6 +4,7 @@ import aiodocker
 import asyncio
 import concurrent
 import logging
+import os
 
 from datetime import datetime, timezone
 from dateutil import parser, relativedelta
@@ -94,6 +95,34 @@ class DockerAPI:
                 and url.find("unix:///") == -1
             ):
                 url = url.replace("unix://", "unix:///")
+
+            # Do some debugging logging for TCP/TLS
+            if url is not None:
+                _LOGGER.debug("Docker URL is '%s'", url)
+
+                # Check for TLS if it is not unix
+                if url.find("tcp:") == 0 or url.find("http:") == 0:
+                    tlsverify = os.environ.get("DOCKER_TLS_VERIFY", None)
+                    certpath = os.environ.get("DOCKER_CERT_PATH", None)
+                    if tlsverify is None:
+                        _LOGGER.debug(
+                            "Docker environment 'DOCKER_TLS_VERIFY' is NOT set"
+                        )
+                    else:
+                        _LOGGER.debug(
+                            "Docker environment set for 'DOCKER_TLS_VERIFY=%s'",
+                            tlsverify,
+                        )
+
+                    if certpath is None:
+                        _LOGGER.debug(
+                            "Docker environment 'DOCKER_CERT_PATH' is NOT set"
+                        )
+                    else:
+                        _LOGGER.debug(
+                            "Docker environment set for 'DOCKER_CERT_PATH=%s'", certpath
+                        )
+
             self._api = aiodocker.Docker(url=url)
         except Exception as err:
             _LOGGER.error("Can not connect to Docker API (%s)", str(err))
