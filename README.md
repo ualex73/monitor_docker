@@ -10,7 +10,7 @@ This repository contains the Monitor Docker component I developed for monitoring
 
 The Monitor Docker allows you to monitor Docker and container statistics and turn on/off containers. It can connected to the Docker daemon locally or remotely. When Home Assistant is used within a Docker container, the Docker daemon should be mounted as follows `-v /var/run/docker.sock:/var/run/docker.sock`.
 
-**Docker run example**
+**Docker run Example**
 ```
 docker run -d \
 ... \
