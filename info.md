@@ -10,7 +10,7 @@ This repository contains the Monitor Docker component I developed for monitoring
 
 The Monitor Docker allows you to monitor Docker and container statistics and turn on/off containers. It can connected to the Docker daemon locally or remotely. When Home Assistant is used within a Docker container, the Docker daemon should be mounted as follows `-v /var/run/docker.sock:/var/run/docker.sock`.
 
-**Docker run example**
+**Docker run Example**
 ```
 docker run -d \
 ... \
@@ -28,7 +28,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 ...
 ```
-NOTE: Making `/var/run/docker.sock` read-only has no effect, because it is a socket (and not file).
+**NOTE:** Making `/var/run/docker.sock` read-only has no effect, because it is a socket (and not file).
 
 ### Configuration
 
@@ -73,7 +73,7 @@ monitor_docker:
 | Parameter            | Type                     | Description                                                           |
 | -------------------- | ------------------------ | --------------------------------------------------------------------- |
 | name                 | string       (Required)  | Client name of Docker daemon. Defaults to `Docker`.                   |
-| url                  | string       (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP is also supported, use e.g. `http://ip:2376/`. For TLS support use e.g. `https://ip:2376`  |
+| url                  | string       (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP is also supported, use e.g. `tcp://ip:2376/`. For TLS support use e.g. `https://ip:2376`  |
 | scan_interval        | time_period  (Optional)  | Update interval. Defaults to 10 seconds.                              |
 | containers           | list         (Optional)  | Array of containers to monitor. Defaults to all containers.           |
 | monitored_conditions | list         (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
@@ -113,12 +113,28 @@ logger:
     custom_components.monitor_docker: debug
 ```
 
-### Error
-Here are some possible common errors mentioned.
+### Q&A
+Here are some possible questions/errors with their answers.
 
-(1) Error: `Missing valid docker_host.Either DOCKER_HOST or local sockets are not available.`
-
-(1) Cause: Most likely the socket is not mounted properly in your Home Assistant container. Please check if you added as a volume `-v /var/run/docker.sock:/var/run/docker.sock`
+1. **Question:** Does this integration work with the HASS or supervisord installers?  
+    **Answer:** Most likely not, because they don't expose the Docker UNIX/TCP socket. If you got it working, please let me know, then I can add it to the README
+1. **Error:** `Missing valid docker_host.Either DOCKER_HOST or local sockets are not available.`  
+    **Answer:** Most likely the socket is not mounted properly in your Home Assistant container. Please check if you added the volume `/var/run/docker.sock`
+1. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via tcp://10.0.0.1:2376/...)`. 
+    **Answer:** You are trying to connect via TCP and most likely the remote address is unavailable. Test it with the command `docker -H tcp://10.0.0.1:2376 ps` if it works (ofcourse replace `10.0.0.1` with your IP address)
+1. **Question:** Can this integration monitor 2 or more Docker instances?  
+    **Answer:** Yes it can. Just duplicate the entries and give it an unique name and define the url as shown below:
+```yaml
+# Example configuration.yaml entry
+monitor_docker:
+  - name: Docker
+    containers:
+    ...
+  - name: RemoteDocker
+    url: tcp://10.0.0.1:2376
+    containers:
+    ...
+```
 
 ## Credits
 
