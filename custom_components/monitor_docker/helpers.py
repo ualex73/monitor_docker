@@ -465,6 +465,7 @@ class DockerContainerAPI:
         self._subscribers = []
         self._cpu_old = {}
         self._network_old = {}
+        self._network_error = 0
 
         self._info = {}
         self._stats = {}
@@ -736,6 +737,15 @@ class DockerContainerAPI:
                     _LOGGER.error("%s: Raw 'networks' %s", raw["networks"], self._name)
                 else:
                     _LOGGER.error("%s: No 'networks' found in raw packet", self._name)
+
+                # Check how many times we got a network error, after 5 times it won't happen
+                # anymore, thus we disable error reporting
+                self._network_error += 1
+                if self._network_error > 5:
+                    _LOGGER.error(
+                        "%s: Too many errors on 'networks' stats, disabling monitoring"
+                    )
+                    self._info[CONTAINER_INFO_NETWORKMODE] = True
 
         # All information collected
         stats["cpu"] = cpu_stats
