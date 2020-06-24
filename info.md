@@ -75,6 +75,7 @@ monitor_docker:
 | name                 | string       (Required)  | Client name of Docker daemon. Defaults to `Docker`.                   |
 | url                  | string       (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `tcp://ip:2376/`. For TLS support see Q&A section. |
 | scan_interval        | time_period  (Optional)  | Update interval. Defaults to 10 seconds.                              |
+| certpath             | string       (Optional)  | If TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS.|
 | containers           | list         (Optional)  | Array of containers to monitor. Defaults to all containers.           |
 | monitored_conditions | list         (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
 | rename               | dictionary   (Optional)  | Dictionary of containers to rename. Default no renaming.              |
