@@ -32,7 +32,7 @@ from .const import (
     CONTAINER,
     CONTAINER_STATS_CPU_PERCENTAGE,
     CONTAINER_INFO_IMAGE,
-    CONTAINER_INFO_NETWORKMODE,
+    CONTAINER_INFO_NETWORK_AVAILABLE,
     CONTAINER_STATS_MEMORY,
     CONTAINER_STATS_MEMORY_PERCENTAGE,
     CONTAINER_STATS_NETWORK_SPEED_UP,
@@ -556,8 +556,8 @@ class DockerContainerAPI:
 
         self._info[CONTAINER_INFO_STATE] = raw["State"]["Status"]
         self._info[CONTAINER_INFO_IMAGE] = raw["Config"]["Image"]
-        self._info[CONTAINER_INFO_NETWORKMODE] = (
-            True if raw["HostConfig"]["NetworkMode"] == "host" else False
+        self._info[CONTAINER_INFO_NETWORK_AVAILABLE] = (
+            False if raw["HostConfig"]["NetworkMode"] in ["host", "none"] else True
         )
 
         # We only do a calculation of startedAt, because we use it twice
@@ -695,7 +695,7 @@ class DockerContainerAPI:
 
         # Gather network information, doesn't work in network=host mode
         network_stats = {}
-        if not self._info[CONTAINER_INFO_NETWORKMODE]:
+        if self._info[CONTAINER_INFO_NETWORK_AVAILABLE]:
             try:
                 network_new = {}
                 network_stats["total_tx"] = 0
@@ -745,7 +745,7 @@ class DockerContainerAPI:
                     _LOGGER.error(
                         "%s: Too many errors on 'networks' stats, disabling monitoring"
                     )
-                    self._info[CONTAINER_INFO_NETWORKMODE] = True
+                    self._info[CONTAINER_INFO_NETWORK_AVAILABLE] = False
 
         # All information collected
         stats["cpu"] = cpu_stats

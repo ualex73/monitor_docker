@@ -24,7 +24,7 @@ from .const import (
     DOCKER_INFO_VERSION,
     CONTAINER,
     CONTAINER_INFO_IMAGE,
-    CONTAINER_INFO_NETWORKMODE,
+    CONTAINER_INFO_NETWORK_AVAILABLE,
     CONTAINER_INFO_STATE,
     CONTAINER_INFO_STATUS,
     CONTAINER_INFO_UPTIME,
@@ -66,16 +66,19 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             # Try to figure out if we should include any network sensors
             capi = api.get_container(cname)
             info = capi.get_info()
-            networkmode = info.get(CONTAINER_INFO_NETWORKMODE)
-            if networkmode is None:
-                _LOGGER.error("%s: Can not determine networkmode?", cname)
-                networkmode = False
+            network_available = info.get(CONTAINER_INFO_NETWORK_AVAILABLE)
+            if network_available is None:
+                _LOGGER.error("%s: Can not determine network-available?", cname)
+                network_available = True
 
             _LOGGER.debug("%s: Adding component Sensor(s)", cname)
             for variable in config[CONF_MONITORED_CONDITIONS]:
                 if variable in CONTAINER_MONITOR_LIST and (
-                    not networkmode
-                    or (networkmode and variable not in CONTAINER_MONITOR_NETWORK_LIST)
+                    network_available
+                    or (
+                        not network_available
+                        and variable not in CONTAINER_MONITOR_NETWORK_LIST
+                    )
                 ):
                     sensors += [
                         DockerContainerSensor(
@@ -281,7 +284,11 @@ class DockerContainerSensor(Entity):
                 self._state_extra = info.get(CONTAINER_INFO_STATE)
             elif info.get(CONTAINER_INFO_STATE) == "running":
                 if self._var_id in CONTAINER_MONITOR_LIST:
-                    if self._var_id in [CONTAINER_INFO_STATE, CONTAINER_INFO_UPTIME, CONTAINER_INFO_IMAGE]:
+                    if self._var_id in [
+                        CONTAINER_INFO_STATE,
+                        CONTAINER_INFO_UPTIME,
+                        CONTAINER_INFO_IMAGE,
+                    ]:
                         state = info.get(self._var_id)
                     else:
                         state = stats.get(self._var_id)
