@@ -13,6 +13,7 @@ from .const import (
     CONFIG,
     CONF_CONTAINERS,
     CONF_RENAME,
+    CONF_SWITCH,
     CONF_SWITCHNAME,
     CONTAINER,
     CONTAINER_INFO_STATE,
@@ -31,6 +32,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     api = hass.data[DOMAIN][name][API]
     config = hass.data[DOMAIN][name][CONFIG]
     prefix = config[CONF_NAME]
+
+    # Don't create any switch if disabled
+    if not config[CONF_SWITCH]:
+        return True
 
     switches = []
 
