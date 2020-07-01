@@ -64,6 +64,7 @@ monitor_docker:
       - version
       - containers_running
       - containers_total
+      - state
       - status
       - memory
 ```
@@ -94,7 +95,8 @@ monitor_docker:
 | containers_memory                 | Memory usage                    | MB    |
 | containers_memory_percentage      | Memory usage                    | %     |
 | images                            | Number of images                | -     |
-| status                            | Container status                | -     |
+| state                             | Container state. This is created, restarting, running, removing, paused, exited or dead  | -     |
+| status                            | Container status. E.g. Up 13 days, Up 5 hours, Exited (0) 11 hours ago | -     |
 | uptime                            | Container start time            | -     |
 | image                             | Container image                 | -     |
 | cpu_percentage                    | CPU usage                       | %     |
