@@ -106,6 +106,7 @@ monitor_docker:
 | network_speed_down                | Network speed downstream        | kB/s  |
 | network_total_up                  | Network total upstream          | MB    |
 | network_total_down                | Network total downstream        | MB    |
+| allinone                          | This is a special condition and when used, it will only create 1 sensor per container with all the monitored conditions as attribute value |-     |
 
 ### Debugging
 

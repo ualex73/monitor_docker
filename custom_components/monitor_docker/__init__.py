@@ -27,6 +27,7 @@ from .const import (
     CONF_SWITCH,
     CONF_SWITCHNAME,
     CONFIG,
+    CONTAINER_INFO_ALLINONE,
     DOMAIN,
     DEFAULT_NAME,
     DEFAULT_SENSORNAME,
@@ -45,7 +46,10 @@ DOCKER_SCHEMA = vol.Schema(
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
         vol.Optional(
             CONF_MONITORED_CONDITIONS, default=MONITORED_CONDITIONS_LIST
-        ): vol.All(cv.ensure_list, [vol.In(MONITORED_CONDITIONS_LIST)]),
+        ): vol.All(
+            cv.ensure_list,
+            [vol.In(MONITORED_CONDITIONS_LIST + list([CONTAINER_INFO_ALLINONE]))],
+        ),
         vol.Optional(CONF_CONTAINERS, default=[]): cv.ensure_list,
         vol.Optional(CONF_RENAME, default={}): dict,
         vol.Optional(CONF_SENSORNAME, default=DEFAULT_SENSORNAME): cv.string,

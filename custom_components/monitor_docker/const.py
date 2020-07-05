@@ -30,6 +30,7 @@ DOCKER_STATS_CPU_PERCENTAGE = "containers_cpu_percentage"
 DOCKER_STATS_MEMORY = "containers_memory"
 DOCKER_STATS_MEMORY_PERCENTAGE = "containers_memory_percentage"
 
+CONTAINER_INFO_ALLINONE = "allinone"
 CONTAINER_INFO_STATE = "state"
 CONTAINER_INFO_STATUS = "status"
 CONTAINER_INFO_NETWORK_AVAILABLE = "network_available"
@@ -89,6 +90,7 @@ CONTAINER_MONITOR_NETWORK_LIST = [
 MONITORED_CONDITIONS_LIST = list(DOCKER_MONITOR_LIST.keys()) + list(
     CONTAINER_MONITOR_LIST.keys()
 )
+
 
 ATTR_MEMORY_LIMIT = "Memory_limit"
 ATTR_ONLINE_CPUS = "Online_CPUs"
