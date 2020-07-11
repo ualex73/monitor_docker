@@ -31,6 +31,7 @@ from .const import (
     CONF_CERTPATH,
     CONTAINER,
     CONTAINER_STATS_CPU_PERCENTAGE,
+    CONTAINER_STATS_1CPU_PERCENTAGE,
     CONTAINER_INFO_IMAGE,
     CONTAINER_INFO_NETWORK_AVAILABLE,
     CONTAINER_STATS_MEMORY,
@@ -49,6 +50,7 @@ from .const import (
     DOCKER_INFO_CONTAINER_TOTAL,
     DOCKER_INFO_VERSION,
     DOCKER_STATS_CPU_PERCENTAGE,
+    DOCKER_STATS_1CPU_PERCENTAGE,
     DOCKER_STATS_MEMORY,
     DOCKER_STATS_MEMORY_PERCENTAGE,
     DOMAIN,
@@ -369,6 +371,7 @@ class DockerAPI:
                 self._info[ATTR_VERSION_KERNEL] = info.get("KernelVersion")
 
                 self._info[DOCKER_STATS_CPU_PERCENTAGE] = 0.0
+                self._info[DOCKER_STATS_1CPU_PERCENTAGE] = 0.0
                 self._info[DOCKER_STATS_MEMORY] = 0
                 self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = 0.0
 
@@ -404,11 +407,27 @@ class DockerAPI:
                     if self._info[DOCKER_STATS_CPU_PERCENTAGE] == 0.0
                     else round(self._info[DOCKER_STATS_CPU_PERCENTAGE], PRECISION)
                 )
+
+                # Calculate for 0-100%
+                if self._info[DOCKER_STATS_CPU_PERCENTAGE] == 0.0:
+                    self._info[DOCKER_STATS_1CPU_PERCENTAGE] = None
+                elif self._info[DOCKER_STATS_CPU_PERCENTAGE] is None:
+                    self._info[DOCKER_STATS_1CPU_PERCENTAGE] = None
+                else:
+                    self._info[DOCKER_STATS_1CPU_PERCENTAGE] = round(
+                        (
+                            self._info[DOCKER_STATS_CPU_PERCENTAGE]
+                            / self._info[ATTR_ONLINE_CPUS]
+                        ),
+                        PRECISION,
+                    )
+
                 self._info[DOCKER_STATS_MEMORY] = (
                     None
                     if self._info[DOCKER_STATS_MEMORY] == 0.0
                     else round(self._info[DOCKER_STATS_MEMORY], PRECISION)
                 )
+
                 self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = (
                     None
                     if self._info[DOCKER_STATS_MEMORY_PERCENTAGE] == 0.0
@@ -416,11 +435,12 @@ class DockerAPI:
                 )
 
                 _LOGGER.debug(
-                    "Version: %s, Containers: %s, Running: %s, CPU: %s%%, Memory: %sMB, %s%%",
+                    "Version: %s, Containers: %s, Running: %s, CPU: %s%%, 1CPU: %s%%, Memory: %sMB, %s%%",
                     self._info[DOCKER_INFO_VERSION],
                     self._info[DOCKER_INFO_CONTAINER_TOTAL],
                     self._info[DOCKER_INFO_CONTAINER_RUNNING],
                     self._info[DOCKER_STATS_CPU_PERCENTAGE],
+                    self._info[DOCKER_STATS_1CPU_PERCENTAGE],
                     self._info[DOCKER_STATS_MEMORY],
                     self._info[DOCKER_STATS_MEMORY_PERCENTAGE],
                 )
@@ -685,8 +705,19 @@ class DockerContainerAPI:
             else:
                 _LOGGER.error("%s: No 'memory_stats' found in raw packet", self._name)
 
+        #if "total" in cpu_stats:
+        #    if cpu_stats.get("total", None) is not None:
+        #        cpu_stats["total_1cpu"] = (
+        #            (cpu_stats["total"] / self._info[ATTR_ONLINE_CPUS]),
+        #            PRECISION,
+        #        )
+        #    else:
+        #        cpu_stats["total_1cpu"] = 0.0
+        #else:
+        #    cpu_stats["total_1cpu"] = 0.0
+
         _LOGGER.debug(
-            "%s: CPU Usage=%s%%. Memory Usage=%sMB, %s%%",
+            "%s: CPU: %s%%, Memory: %sMB, %s%%",
             self._name,
             cpu_stats.get("total", None),
             memory_stats.get("usage", None),
@@ -753,6 +784,7 @@ class DockerContainerAPI:
         stats["network"] = network_stats
 
         stats[CONTAINER_STATS_CPU_PERCENTAGE] = cpu_stats.get("total")
+        #stats[CONTAINER_STATS_1CPU_PERCENTAGE] = cpu_stats.get("total_1cpu")
         stats[CONTAINER_STATS_MEMORY] = memory_stats.get("usage")
         stats[CONTAINER_STATS_MEMORY_PERCENTAGE] = memory_stats.get("usage_percent")
         stats[CONTAINER_STATS_NETWORK_SPEED_UP] = network_stats.get("speed_tx")
