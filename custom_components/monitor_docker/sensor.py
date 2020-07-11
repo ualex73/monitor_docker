@@ -244,7 +244,7 @@ class DockerContainerSensor(Entity):
             self._entity_id = ENTITY_ID_FORMAT.format(
                 slugify(self._prefix + "_" + self._cname)
             )
-            self._name = sensor_name_format.format(name=alias)
+            self._name = sensor_name_format.format(name=alias, sensorname="", sensor="")
         else:
             self._entity_id = ENTITY_ID_FORMAT.format(
                 slugify(self._prefix + "_" + self._cname + "_" + self._var_name)
