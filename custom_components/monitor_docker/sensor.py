@@ -48,6 +48,8 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     config = hass.data[DOMAIN][name][CONFIG]
     prefix = config[CONF_NAME]
 
+    _LOGGER.debug("Setting up sensor(s)")
+
     sensors = []
     sensors = [
         DockerSensor(api, prefix, variable)

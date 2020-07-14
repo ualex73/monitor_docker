@@ -24,7 +24,7 @@ from .const import (
     CONF_CONTAINERS,
     CONF_RENAME,
     CONF_SENSORNAME,
-    CONF_SWITCH,
+    CONF_SWITCHENABLED,
     CONF_SWITCHNAME,
     CONFIG,
     CONTAINER_INFO_ALLINONE,
@@ -53,7 +53,7 @@ DOCKER_SCHEMA = vol.Schema(
         vol.Optional(CONF_CONTAINERS, default=[]): cv.ensure_list,
         vol.Optional(CONF_RENAME, default={}): dict,
         vol.Optional(CONF_SENSORNAME, default=DEFAULT_SENSORNAME): cv.string,
-        vol.Optional(CONF_SWITCH, default=True): cv.boolean,
+        vol.Optional(CONF_SWITCHENABLED, default=True): cv.boolean,
         vol.Optional(CONF_SWITCHNAME, default=DEFAULT_SWITCHNAME): cv.string,
         vol.Optional(CONF_CERTPATH, default=""): cv.string,
     }

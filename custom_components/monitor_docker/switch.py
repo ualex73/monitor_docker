@@ -13,7 +13,7 @@ from .const import (
     CONFIG,
     CONF_CONTAINERS,
     CONF_RENAME,
-    CONF_SWITCH,
+    CONF_SWITCHENABLED,
     CONF_SWITCHNAME,
     CONTAINER,
     CONTAINER_INFO_STATE,
@@ -34,8 +34,11 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     prefix = config[CONF_NAME]
 
     # Don't create any switch if disabled
-    if not config[CONF_SWITCH]:
+    if not config[CONF_SWITCHENABLED]:
+        _LOGGER.debug("Switch(es) are disabled")
         return True
+
+    _LOGGER.debug("Setting up switch(es)")
 
     switches = []
 

@@ -32,6 +32,11 @@ services:
 
 ### Configuration
 
+{% if installed %}
+### Breaking Changes
+Replaced option **switch** with **switchenabled**, because it gave some users an error
+{% endif %}
+
 To use the `monitor_docker` in your installation, add the following to your `configuration.yaml` file:
 
 ```yaml
@@ -82,7 +87,7 @@ monitor_docker:
 | rename               | dictionary   (Optional)  | Dictionary of containers to rename. Default no renaming.              |
 | sensorname           | string       (Optional)  | Sensor string to format the name used in Home Assistant. Defaults to `{name} {sensor}`, where `{name}` is the container name and `{sensor}` is e.g. Memory, Status, Network speed Up |
 | switchname           | string       (optional)  | Switch string to format the name used in Home Assistant. Defaults to `{name}`, where `{name}` is the container name. |
-| switch               | boolean      (Optional)  | Enable/Disable the switch entity for all containers. Default is enabled. |
+| switchenabled        | boolean      (Optional)  | Enable/Disable the switch entity for all containers. Default is enabled. |
 
 | Monitored Conditions              | Description                     | Unit  |
 | --------------------------------- | ------------------------------- | ----- |
