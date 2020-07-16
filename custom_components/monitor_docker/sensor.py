@@ -371,7 +371,7 @@ class DockerContainerSensor(Entity):
                     else:
                         state = stats.get(self._var_id)
 
-        if state != self._state:
+        if state != self._state or self._var_id == CONTAINER_INFO_ALLINONE:
             self._state = state
 
             try:

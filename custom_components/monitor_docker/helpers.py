@@ -705,7 +705,7 @@ class DockerContainerAPI:
             else:
                 _LOGGER.error("%s: No 'memory_stats' found in raw packet", self._name)
 
-        #if "total" in cpu_stats:
+        # if "total" in cpu_stats:
         #    if cpu_stats.get("total", None) is not None:
         #        cpu_stats["total_1cpu"] = (
         #            (cpu_stats["total"] / self._info[ATTR_ONLINE_CPUS]),
@@ -713,7 +713,7 @@ class DockerContainerAPI:
         #        )
         #    else:
         #        cpu_stats["total_1cpu"] = 0.0
-        #else:
+        # else:
         #    cpu_stats["total_1cpu"] = 0.0
 
         _LOGGER.debug(
@@ -784,7 +784,11 @@ class DockerContainerAPI:
         stats["network"] = network_stats
 
         stats[CONTAINER_STATS_CPU_PERCENTAGE] = cpu_stats.get("total")
-        #stats[CONTAINER_STATS_1CPU_PERCENTAGE] = cpu_stats.get("total_1cpu")
+        if "online_cpus" in cpu_stats and cpu_stats.get("total") is not None:
+            stats[CONTAINER_STATS_1CPU_PERCENTAGE] = round(
+                cpu_stats.get("total") / cpu_stats["online_cpus"], PRECISION
+            )
+        # stats[CONTAINER_STATS_1CPU_PERCENTAGE] = cpu_stats.get("total_1cpu")
         stats[CONTAINER_STATS_MEMORY] = memory_stats.get("usage")
         stats[CONTAINER_STATS_MEMORY_PERCENTAGE] = memory_stats.get("usage_percent")
         stats[CONTAINER_STATS_NETWORK_SPEED_UP] = network_stats.get("speed_tx")

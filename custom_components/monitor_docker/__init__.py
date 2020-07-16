@@ -89,6 +89,15 @@ async def async_setup(hass, config):
 
     # Now go through all possible entries, we support 1 or more docker hosts (untested)
     for entry in config[DOMAIN]:
+        # Check if CONF_MONITORED_CONDITIONS has only ALLINONE, then expand to all
+        if (
+            len(entry[CONF_MONITORED_CONDITIONS]) == 1
+            and CONTAINER_INFO_ALLINONE in entry[CONF_MONITORED_CONDITIONS]
+        ):
+            entry[CONF_MONITORED_CONDITIONS] = list(MONITORED_CONDITIONS_LIST) + list(
+                [CONTAINER_INFO_ALLINONE]
+            )
+
         if entry[CONF_NAME] in hass.data[DOMAIN]:
             _LOGGER.error(
                 "Instance %s is duplicate, please assign an unique name",
