@@ -65,12 +65,14 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         clist = api.list_containers()
 
     allinone = False
+    stateremoved = False
 
     # Detect allinone
     if CONTAINER_INFO_ALLINONE in config[CONF_MONITORED_CONDITIONS]:
         allinone = True
         config[CONF_MONITORED_CONDITIONS].remove(CONTAINER_INFO_ALLINONE)
         if CONTAINER_INFO_STATE in config[CONF_MONITORED_CONDITIONS]:
+            stateremoved = True
             config[CONF_MONITORED_CONDITIONS].remove(CONTAINER_INFO_STATE)
 
     for cname in clist:
@@ -126,6 +128,12 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                                 config[CONF_SENSORNAME],
                             )
                         ]
+
+    # Restore state, required for destroy/create container
+    if allinone:
+        config[CONF_MONITORED_CONDITIONS].append(CONTAINER_INFO_ALLINONE)
+    if stateremoved:
+        config[CONF_MONITORED_CONDITIONS].append(CONTAINER_INFO_STATE)
 
     async_add_entities(sensors, True)
 
