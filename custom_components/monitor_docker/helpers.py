@@ -57,6 +57,8 @@ from .const import (
     PRECISION,
 )
 
+VERSION = "1.3b"
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -84,6 +86,8 @@ class DockerAPI:
         self._info = {}
         self._event_create = {}
         self._event_destroy = {}
+
+        _LOGGER.debug("Helper version: %s", VERSION)
 
         self._interval = config[CONF_SCAN_INTERVAL].seconds
 
@@ -667,6 +671,12 @@ class DockerContainerAPI:
                     )
 
             self._cpu_old = cpu_new
+
+            if self._cpu_error > 0:
+                _LOGGER.debug(
+                    "%s: CPU error count %s reset to 0", self._name, self._cpu_error
+                )
+
             self._cpu_error = 0
 
         except KeyError as err:
@@ -698,6 +708,13 @@ class DockerContainerAPI:
                 float(memory_stats["usage"]) / float(memory_stats["limit"]) * 100.0,
                 PRECISION,
             )
+
+            if self._memory_error > 0:
+                _LOGGER.debug(
+                    "%s: Memory error count %s reset to 0",
+                    self._name,
+                    self._memory_error,
+                )
 
             self._memory_error = 0
 
