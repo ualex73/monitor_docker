@@ -176,7 +176,7 @@ monitor_docker:
 6. **Question:** Can create, delete or re-create of a container be implemented in the integration?  
     **Answer:** The used Docker library has no easy (and safe) way to handle such functionality. Please use *docker-compose* to handle such operations. If anybody can make this fully and safe working, I am happy to merge the PR   
 7. **Question:** Can you add more security to a switch?  
-  **Answer:** No, this isn't possible from the integration. You need to do this directly in Lovelace itself, with the card e.g. https://github.com/iantrich/restriction-card
+  **Answer:** No, this isn't possible from the integration. You need to do this directly in Lovelace itself, with the card e.g. https://github.com/iantrich/restriction-card  
 8. **Question:** All the report memories values are 0 (zero), can this be fixed in the integration?  
   **Answer:** No, the integration just uses the available information from the API and you should fix your Docker
 
