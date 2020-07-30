@@ -172,6 +172,7 @@ monitor_docker:
     containers:
     ...
 ```
+*NOTE*: The integration supports multiple Docker instances, but you can only define 1 TLS configuration which is applied to all (thus you cannot mix TCP with and without TLS).  
 6. **Question:** Can create, delete or re-create of a container be implemented in the integration?  
     **Answer:** The used Docker library has no easy (and safe) way to handle such functionality. Please use *docker-compose* to handle such operations. If anybody can make this fully and safe working, I am happy to merge the PR   
 7. **Question:** Can you add more security to a switch?  
