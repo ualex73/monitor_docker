@@ -133,7 +133,21 @@ Here are some possible questions/errors with their answers.
 3. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via tcp://10.0.0.1:2376/...)`.  
     **Answer:** You are trying to connect via TCP and most likely the remote address is unavailable. Test it with the command `docker -H tcp://10.0.0.1:2376 ps` if it works (ofcourse replace `10.0.0.1` with your IP address)
 4. **Question:** Is Docker TCP socket via TLS supported?  
-    **Answer:** Yes it is. You need to set the url to e.g. `tcp://ip:2376` and the environment variables `DOCKER_TLS_VERIFY=1` and `DOCKER_CERT_PATH=<path to your certificates>` need to be set
+    **Answer:** Yes it is. You need to set the url to e.g. `tcp://ip:2376` and the environment variables `DOCKER_TLS_VERIFY=1` and `DOCKER_CERT_PATH=<path to your certificates>` need to be set  
+The following is a docker-compose example how to set the environment variables and the volume with the certificates:
+```
+services:
+  hass:
+    image: homeassistant/home-assistant
+...
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./certs:/certs
+    environment:
+      - DOCKER_TLS_VERIFY=1
+      - DOCKER_CERT_PATH=/certs
+...
+```
 5. **Question:** Can this integration monitor 2 or more Docker instances?  
     **Answer:** Yes it can. Just duplicate the entries and give it an unique name and define the url as shown below:
 ```yaml
@@ -147,6 +161,7 @@ monitor_docker:
     containers:
     ...
 ```
+*NOTE*: The integration supports multiple Docker instances, but you can only define 1 TLS configuration which is applied to all (thus you cannot mix TCP with and without TLS).  
 6. **Question:** Can create, delete or re-create of a container be implemented in the integration?  
     **Answer:** The used Docker library has no easy (and safe) way to handle such functionality. Please use *docker-compose* to handle such operations. If anybody can make this fully and safe working, I am happy to merge the PR   
 7. **Question:** Can you add more security to a switch?  
