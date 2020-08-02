@@ -168,6 +168,8 @@ monitor_docker:
   **Answer:** No, this isn't possible from the integration. You need to do this directly in Lovelace itself, with the card e.g. https://github.com/iantrich/restriction-card  
 8. **Question:** All the report memories values are 0 (zero), can this be fixed in the integration?  
   **Answer:** No, the integration just uses the available information from the API and you should fix your Docker
+9. **Question:** It is possible to monitor HASS.IO?  
+  **Answer:** Yes, please use the Docker Socker Proxy https://github.com/Tecnativa/docker-socket-proxy and configure tcp://ip:port to connect to the proxy. This has been tested and verified by other users, but I cannot give support on it.
 
 ## Credits
 
