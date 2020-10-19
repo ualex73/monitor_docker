@@ -178,9 +178,9 @@ monitor_docker:
 7. **Question:** Can you add more security to a switch?  
   **Answer:** No, this isn't possible from the integration. You need to do this directly in Lovelace itself, with the card e.g. https://github.com/iantrich/restriction-card  
 8. **Question:** All the report memories values are 0 (zero), can this be fixed in the integration?  
-  **Answer:** No, the integration just uses the available information from the API and you should fix your Docker
+  **Answer:** No, the integration just uses the available information from the API and you should fix your Docker   
 9. **Question:** It is possible to monitor HASS.IO?  
-  **Answer:** Yes, please use the Docker Socker Proxy https://github.com/Tecnativa/docker-socket-proxy and configure tcp://ip:port to connect to the proxy. This has been tested and verified by other users, but I cannot give support on it.
+  **Answer:** Yes, please use the Docker Socker Proxy https://github.com/Tecnativa/docker-socket-proxy and configure tcp://ip:port to connect to the proxy. This has been tested and verified by other users, but I cannot give support on it.   
 10. **Question:** I get a permission denied error?  
   **Answer:** In general Docker and HASS.IO are running as root and always can connect to /var/run/docker.sock. If you run in a venv environment or directly with Python, you may need to add "docker" to the user used for Home Assistant. The following commands may help you, and it is recommended to reboot after "usermod":
   ```
