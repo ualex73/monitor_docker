@@ -404,7 +404,7 @@ class DockerAPI:
                 # Calculate memory percentage
                 if (
                     self._info[ATTR_MEMORY_LIMIT] is not None
-                    and self._info[ATTR_MEMORY_LIMIT] is not 0
+                    and self._info[ATTR_MEMORY_LIMIT] != 0
                 ):
                     self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = round(
                         self._info[DOCKER_STATS_MEMORY]
@@ -736,7 +736,7 @@ class DockerContainerAPI:
                 )
                 if "memory_stats" in raw:
                     _LOGGER.error(
-                        "%s: Raw 'memory_stats' %s", raw["memory_stats"], self._name
+                        "%s: Raw 'memory_stats' %s", self._name, raw["memory_stats"]
                     )
                 else:
                     _LOGGER.error(
@@ -803,7 +803,8 @@ class DockerContainerAPI:
                 self._network_error += 1
                 if self._network_error > 5:
                     _LOGGER.error(
-                        "%s: Too many errors on 'networks' stats, disabling monitoring"
+                        "%s: Too many errors on 'networks' stats, disabling monitoring",
+                        self._name,
                     )
                     self._info[CONTAINER_INFO_NETWORK_AVAILABLE] = False
 
