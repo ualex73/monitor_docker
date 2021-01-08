@@ -62,7 +62,7 @@ DOCKER_MONITOR_LIST = {
 
 CONTAINER_MONITOR_LIST = {
     CONTAINER_INFO_STATE: ["State", None, "mdi:checkbox-marked-circle-outline", None],
-    CONTAINER_INFO_HEALTH: ["Health", None, "mdi:hearth-pulse", None],
+    CONTAINER_INFO_HEALTH: ["Health", None, "mdi:heart-pulse", None],
     CONTAINER_INFO_STATUS: ["Status", None, "mdi:checkbox-marked-circle-outline", None],
     CONTAINER_INFO_UPTIME: ["Up Time", "", "mdi:clock", "timestamp"],
     CONTAINER_INFO_IMAGE: ["Image", None, "mdi:information-outline", None],
