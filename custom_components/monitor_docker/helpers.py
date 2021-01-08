@@ -42,6 +42,7 @@ from .const import (
     CONTAINER_STATS_NETWORK_TOTAL_DOWN,
     DOCKER_INFO_IMAGES,
     CONTAINER_INFO_STATE,
+    CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_STATUS,
     CONTAINER_INFO_UPTIME,
     DOCKER_INFO_CONTAINER_RUNNING,
@@ -588,11 +589,16 @@ class DockerContainerAPI:
 
         raw = await self._container.show()
 
-        self._info[CONTAINER_INFO_STATE] = raw["State"]["Status"]
-        self._info[CONTAINER_INFO_IMAGE] = raw["Config"]["Image"]
+        self._info[CONTAINER_INFO_STATE]  = raw["State"]["Status"]
+        self._info[CONTAINER_INFO_IMAGE]  = raw["Config"]["Image"]
         self._info[CONTAINER_INFO_NETWORK_AVAILABLE] = (
             False if raw["HostConfig"]["NetworkMode"] in ["host", "none"] else True
         )
+
+        try:
+            self._info[CONTAINER_INFO_HEALTH] = raw["State"]["Health"]["Status"]
+        except:
+            self._info[CONTAINER_INFO_HEALTH] = "unknown"
 
         # We only do a calculation of startedAt, because we use it twice
         startedAt = parser.parse(raw["State"]["StartedAt"])
