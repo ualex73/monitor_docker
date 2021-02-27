@@ -18,6 +18,8 @@ DEFAULT_SWITCHNAME = "{name}"
 
 COMPONENTS = ["sensor", "switch"]
 
+SERVICE_RESTART = "restart"
+
 PRECISION = 2
 
 DOCKER_INFO_VERSION = "version"
@@ -95,7 +97,7 @@ MONITORED_CONDITIONS_LIST = list(DOCKER_MONITOR_LIST.keys()) + list(
     CONTAINER_MONITOR_LIST.keys()
 )
 
-
+ATTR_NAME = "name"
 ATTR_MEMORY_LIMIT = "Memory_limit"
 ATTR_ONLINE_CPUS = "Online_CPUs"
 ATTR_VERSION_ARCH = "Architecture"

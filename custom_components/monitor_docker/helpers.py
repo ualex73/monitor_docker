@@ -855,7 +855,7 @@ class DockerContainerAPI:
         try:
             await self._container.start()
         except Exception as err:
-            _LOGGER.error("%s: Can not start containner (%s)", self._name, str(err))
+            _LOGGER.error("%s: Can not start container (%s)", self._name, str(err))
         finally:
             self._busy = False
 
@@ -873,7 +873,7 @@ class DockerContainerAPI:
         try:
             await self._container.stop(t=10)
         except Exception as err:
-            _LOGGER.error("%s: Can not stop containner (%s)", self._name, str(err))
+            _LOGGER.error("%s: Can not stop container (%s)", self._name, str(err))
         finally:
             self._busy = False
 
@@ -884,6 +884,24 @@ class DockerContainerAPI:
 
         self._busy = True
         self._loop.create_task(self._stop())
+
+    #############################################################
+    async def _restart(self):
+        """Separate loop to stop container, because HA loop can't be used."""
+        try:
+            await self._container.restart()
+        except Exception as err:
+            _LOGGER.error("%s: Can not restart container (%s)", self._name, str(err))
+        finally:
+            self._busy = False
+
+    #############################################################
+    async def restart(self):
+        """Called from service call."""
+        _LOGGER.info("%s: Restart container", self._name)
+
+        self._busy = True
+        self._loop.create_task(self._restart())
 
     #############################################################
     def get_name(self):
