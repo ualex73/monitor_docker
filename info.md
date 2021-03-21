@@ -30,6 +30,15 @@ services:
 ```
 **NOTE:** Making `/var/run/docker.sock` read-only has no effect, because it is a socket (and not file).
 
+**Raspberry Pi (Raspbian)**
+
+Using a Raspberry Pi with Raspbian it could happen no memory is reported. In such case the Docker API does not report it to Monitor Docker. Making the following change, normally fixes the problem:
+- Open the file `/boot/cmdline.txt`
+- Add the following to the end of the existing line `cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory`
+- Reboot your Raspberry Pi
+
+NOTE: Add the line to the existing line, do *not* replace it
+
 ### Configuration
 
 {% if installed %}
