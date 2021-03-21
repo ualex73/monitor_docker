@@ -43,7 +43,7 @@ NOTE: Add the line to the existing line, do *not* replace it
 
 Also on Ubuntu/Debian it is possible no memory is shown, the following changes could solve your problem:
 - Open the file `/etc/default/grub`
-- Modify the `GRUB_CMDLINE_LINUX_DEFAULT=` to `GRUB_CMDLINE_LINUX_DEFAULT="quiet cgroup_enable=memory swapaccount=1"`
+- Modify the `GRUB_CMDLINE_LINUX_DEFAULT=""` to `GRUB_CMDLINE_LINUX_DEFAULT="quiet cgroup_enable=memory swapaccount=1"`
 - Run `sudo update-grub`
 - Reboot your Ubuntu/Debian
 
