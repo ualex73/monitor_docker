@@ -39,6 +39,16 @@ Using a Raspberry Pi with Raspbian it could happen no memory is reported. In suc
 
 NOTE: Add the line to the existing line, do *not* replace it
 
+**Ubuntu / Debian**
+
+Also on Ubuntu/Debian it is possible no memory is shown, the following changes could solve your problem:
+- Open the file `/etc/default/grub`
+- Modify the `GRUB_CMDLINE_LINUX_DEFAULT=` to `GRUB_CMDLINE_LINUX_DEFAULT="quiet cgroup_enable=memory swapaccount=1"`
+- Run `sudo update-grub`
+- Reboot your Ubuntu/Debian
+
+NOTE: This is untested, use at your risk
+
 ### Configuration
 
 {% if installed %}

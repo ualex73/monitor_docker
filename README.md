@@ -32,12 +32,22 @@ NOTE: Making `/var/run/docker.sock` read-only has no effect, because it is a soc
 
 **Raspberry Pi (Raspbian)**
 
-Using a Raspberry Pi with Raspbian it could happen no memory is reported. In such case the Docker API does not report it to Monitor Docker. Making the following change, normally fixes the problem:
+Using a Raspberry Pi with Raspbian it could happen no memory is reported. In such case the Docker API does not report it to Monitor Docker. Making the following changes, normally fixes the problem:
 - Open the file `/boot/cmdline.txt`
 - Add the following to the end of the existing line `cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory`
 - Reboot your Raspberry Pi
 
 NOTE: Add the line to the existing line, do *not* replace it
+
+**Ubuntu / Debian**
+
+Also on Ubuntu/Debian it is possible no memory is shown, the following changes could solve your problem:
+- Open the file `/etc/default/grub`
+- Modify the `GRUB_CMDLINE_LINUX_DEFAULT=` to `GRUB_CMDLINE_LINUX_DEFAULT="quiet cgroup_enable=memory swapaccount=1"`
+- Run `sudo update-grub`
+- Reboot your Ubuntu/Debian
+
+NOTE: This is untested, use at your risk
 
 ## Installation
 
