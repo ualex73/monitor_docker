@@ -811,7 +811,7 @@ class DockerContainerAPI:
 
         # Check if we should block the current value or not
         if mem_breach and not self._memory_prev_breach:
-            _LOGGER.debug("%s: BREACH BREACH BREACH %s%%", self._name, mem_breach)
+            _LOGGER.debug("%s: Memory breach %s%%", self._name, mem_breach)
 
             # Store values into previous
             tmp1 = self._memory_prev
