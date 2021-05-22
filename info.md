@@ -115,7 +115,8 @@ monitor_docker:
 | containers_running                | Number of running containers    | -     |
 | containers_paused                 | Number of paused containers     | -     |
 | containers_stopped                | Number of stopped containers    | -     |
-| containers_cpu_percentage         | CPU Usage                       | %     |
+ containers_cpu_percentage         | CPU Usage. The CPU usage depends on the number of CPU cores, e.g. if you have 8 cores, this value can have a maximum of 800% | %     |
+| containers_1cpu_percentage         | CPU Usage, between 0-100%      | %     |
 | containers_memory                 | Memory usage                    | MB    |
 | containers_memory_percentage      | Memory usage                    | %     |
 | images                            | Number of images                | -     |
@@ -124,7 +125,8 @@ monitor_docker:
 | health                            | Container health if available   | -     |
 | uptime                            | Container start time            | -     |
 | image                             | Container image                 | -     |
-| cpu_percentage                    | CPU usage                       | %     |
+| cpu_percentage                    | CPU usage. The CPU usage depends on the number of CPU cores, e.g. if you have 8 cores, this value can have a maximum of 800% | %     |
+| 1cpu_percentage                   | CPU Usage, between 0-100%       | %     |
 | memory                            | Memory usage                    | MB    |
 | memory_percentage                 | Memory usage                    | %     |
 | network_speed_up                  | Network speed upstream          | kB/s  |
