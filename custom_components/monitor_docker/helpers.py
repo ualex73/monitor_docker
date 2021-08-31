@@ -729,10 +729,18 @@ class DockerContainerAPI:
         # Gather memory information
         memory_stats = {}
         try:
-            # Memory is in Bytes, convert to MBytes
-            memory_stats["usage"] = toMB(
-                raw["memory_stats"]["usage"] - raw["memory_stats"]["stats"]["cache"]
-            )
+            # Workaround for Debian 11 vs 10
+            if "cache" in raw:
+                # Memory is in Bytes, convert to MBytes
+                memory_stats["usage"] = toMB(
+                    raw["memory_stats"]["usage"] - raw["memory_stats"]["stats"]["cache"]
+                )
+            else:
+                memory_stats["usage"] = toMB(
+                    raw["memory_stats"]["usage"]
+                    - raw["memory_stats"]["stats"]["inactive_file"]
+                )
+
             memory_stats["limit"] = toMB(raw["memory_stats"]["limit"])
             memory_stats["max_usage"] = toMB(raw["memory_stats"]["max_usage"])
             memory_stats["usage_percent"] = round(
