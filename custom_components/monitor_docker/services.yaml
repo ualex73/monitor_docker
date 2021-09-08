@@ -4,3 +4,6 @@ restart:
     name:
       description: Name of the container
       example: "nodered"
+    server:
+      description: Name of the server, as given in config. Only required if you have more than one docker host config.
+      example: "mediaserver"
