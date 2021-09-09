@@ -36,13 +36,9 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
         cname = parm.data[ATTR_NAME]
         cserver = parm.data.get(ATTR_SERVER, None)
-        _LOGGER.error(
-            "Restart service input parameter, name: '%s' , server: '%s'", cname, cserver
-        )
 
         server_name = name
         if cserver is not None:
-
           if cserver not in hass.data[DOMAIN]:
             _LOGGER.error(
                 "Server '%s' is not configured",  cserver
