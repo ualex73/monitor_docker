@@ -160,7 +160,39 @@ logger:
 Here are some possible questions/errors with their answers.
 
 1. **Question:** Does this integration work with the HASS or supervisord installers?  
-    **Answer:** Most likely not, because they don't expose the Docker UNIX/TCP socket. If you got it working, please let me know, then I can add it to the README
+    **Answer:** Yes, with an external docker container. Home Assistant supervised does not expose the Docker UNIX/TCP socket. However, you can use an external docker container named `docker-socket-proxy`. Start this docker with the following docker-compose code. It exposes the socket over TCP and `monitor_docer` can listen to it.
+    ```yaml
+    # Proxy the Docker sock so that we can pick up stats for HomeAssistant
+    dockerproxy:
+      image: tecnativa/docker-socket-proxy
+      container_name: dockerproxy
+      privileged: true
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+      ports:
+        - 2375:2375
+      environment:
+        - BUILD=1
+        - COMMIT=1
+        - CONFIGS=1
+        - CONTAINERS=1
+        - DISTRIBUTION=1
+        - EXEC=1
+        - IMAGES=1
+        - INFO=1
+        - NETWORKS=1
+        - NODES=1
+        - PLUGINS=1
+        - SERVICES=1
+        - SESSSION=1
+        - SWARM=1
+    ```
+    Add the following to your `configuration.yaml`:
+```yaml
+    monitor_docker:
+      - name: Docker
+        url: tcp://<host_ip>:2375
+```
 2. **Error:** `Missing valid docker_host.Either DOCKER_HOST or local sockets are not available.`  
     **Answer:** Most likely the socket is not mounted properly in your Home Assistant container. Please check if you added the volume `/var/run/docker.sock`
 3. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via tcp://10.0.0.1:2376...)`.  
