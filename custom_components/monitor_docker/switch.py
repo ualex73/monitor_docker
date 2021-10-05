@@ -12,6 +12,7 @@ from homeassistant.util import slugify
 from .const import (
     API,
     ATTR_NAME,
+    ATTR_SERVER,
     CONF_CONTAINERS,
     CONF_RENAME,
     CONF_SWITCHENABLED,
@@ -23,7 +24,7 @@ from .const import (
     SERVICE_RESTART,
 )
 
-SERVICE_RESTART_SCHEMA = vol.Schema({ATTR_NAME: cv.string})
+SERVICE_RESTART_SCHEMA = vol.Schema({ATTR_NAME: cv.string, ATTR_SERVER: cv.string})
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,20 +35,32 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     async def async_restart(parm):
 
         cname = parm.data[ATTR_NAME]
-        if len(config[CONF_CONTAINERS]) == 0:
-            api = hass.data[DOMAIN][name][API]
-            if api.get_container(cname):
-                await api.get_container(cname).restart()
+        cserver = parm.data.get(ATTR_SERVER, None)
+
+        server_name = name
+        if cserver is not None:
+          if cserver not in hass.data[DOMAIN]:
+            _LOGGER.error(
+                "Server '%s' is not configured",  cserver
+            )
+            return
+          else:
+            server_name = cserver
+
+        server_config = hass.data[DOMAIN][server_name][CONFIG]
+        server_api = hass.data[DOMAIN][server_name][API]
+
+        if len(server_config[CONF_CONTAINERS]) == 0:
+            if server_api.get_container(cname):
+                await server_api.get_container(cname).restart()
             else:
                 _LOGGER.error(
                     "Service restart failed, container '%s'does not exist", cname
                 )
-        elif cname in config[CONF_CONTAINERS]:
+        elif cname in server_config[CONF_CONTAINERS]:
             _LOGGER.debug("Trying to restart container '%s'", cname)
-
-            api = hass.data[DOMAIN][name][API]
-            if api.get_container(cname):
-                await api.get_container(cname).restart()
+            if server_api.get_container(cname):
+                await server_api.get_container(cname).restart()
             else:
                 _LOGGER.error(
                     "Service restart failed, container '%s'does not exist", cname

@@ -103,6 +103,7 @@ MONITORED_CONDITIONS_LIST = list(DOCKER_MONITOR_LIST.keys()) + list(
 )
 
 ATTR_NAME = "name"
+ATTR_SERVER = "server"
 ATTR_MEMORY_LIMIT = "Memory_limit"
 ATTR_ONLINE_CPUS = "Online_CPUs"
 ATTR_VERSION_ARCH = "Architecture"
