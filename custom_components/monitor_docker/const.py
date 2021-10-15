@@ -8,6 +8,7 @@ CONTAINER = "container"
 CONF_CERTPATH = "certpath"
 CONF_CONTAINERS = "containers"
 CONF_MEMORYCHANGE = "memorychange"
+CONF_PREFIX = "prefix"
 CONF_RENAME = "rename"
 CONF_RETRY = "retry"
 CONF_SENSORNAME = "sensorname"
@@ -103,9 +104,9 @@ MONITORED_CONDITIONS_LIST = list(DOCKER_MONITOR_LIST.keys()) + list(
 )
 
 ATTR_NAME = "name"
-ATTR_SERVER = "server"
 ATTR_MEMORY_LIMIT = "Memory_limit"
 ATTR_ONLINE_CPUS = "Online_CPUs"
+ATTR_SERVER = "server"
 ATTR_VERSION_ARCH = "Architecture"
 ATTR_VERSION_KERNEL = "Kernel"
 ATTR_VERSION_OS = "OS"

@@ -14,6 +14,7 @@ from .const import (
     ATTR_NAME,
     ATTR_SERVER,
     CONF_CONTAINERS,
+    CONF_PREFIX,
     CONF_RENAME,
     CONF_SWITCHENABLED,
     CONF_SWITCHNAME,
@@ -76,7 +77,11 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     name = discovery_info[CONF_NAME]
     api = hass.data[DOMAIN][name][API]
     config = hass.data[DOMAIN][name][CONFIG]
+
+    # Set or overrule prefix
     prefix = config[CONF_NAME]
+    if config[CONF_PREFIX]:
+        prefix = config[CONF_PREFIX]
 
     # Don't create any switch if disabled
     if not config[CONF_SWITCHENABLED]:

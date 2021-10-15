@@ -5,6 +5,7 @@ import asyncio
 import concurrent
 import logging
 import os
+import time
 
 from datetime import datetime, timezone
 from dateutil import parser, relativedelta
@@ -59,7 +60,7 @@ from .const import (
     PRECISION,
 )
 
-VERSION = "1.4"
+VERSION = "1.11"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ def toMB(value):
 class DockerAPI:
     """Docker API abstraction allowing multiple Docker instances beeing monitored."""
 
-    def __init__(self, hass, config):
+    def __init__(self, hass, config, startCount=0):
         """Initialize the Docker API."""
 
         self._hass = hass
@@ -88,6 +89,8 @@ class DockerAPI:
         self._info = {}
         self._event_create = {}
         self._event_destroy = {}
+        self._dockerStopped = False
+        self._subscribers = []
 
         _LOGGER.debug("Helper version: %s", VERSION)
 
@@ -104,6 +107,10 @@ class DockerAPI:
                 and url.find("unix:///") == -1
             ):
                 url = url.replace("unix://", "unix:///")
+
+            # When we reconnect with tcp, we should delay - docker is maybe not fully ready
+            if startCount > 0 and url.find("unix:") != 0:
+                time.sleep(5)
 
             # Do some debugging logging for TCP/TLS
             if url is not None:
@@ -186,9 +193,33 @@ class DockerAPI:
     #############################################################
     def _monitor_stop(self, _service_or_event):
         """Stop the monitor thread."""
+
         _LOGGER.info("Stopping Monitor Docker thread (%s)", self._config[CONF_NAME])
 
         self._loop.stop()
+
+    #############################################################
+    def remove_entities(self):
+        """Remove docker info entities."""
+
+        if len(self._subscribers) > 0:
+            _LOGGER.debug(
+                "%s: Removing entities from Docker info", self._config[CONF_NAME]
+            )
+
+        for callback in self._subscribers:
+            callback(remove=True)
+
+        self._subscriber = []
+
+    #############################################################
+    def register_callback(self, callback, variable):
+        """Register callback from sensor."""
+        if callback not in self._subscribers:
+            _LOGGER.debug(
+                "%s: Added callback entity: %s", self._config[CONF_NAME], variable
+            )
+            self._subscribers.append(callback)
 
     #############################################################
     async def _run_docker_events(self):
@@ -198,9 +229,34 @@ class DockerAPI:
             subscriber = self._api.events.subscribe()
 
             while True:
+
                 event = await subscriber.get()
+
+                # When we receive none, the connection normally is broken
                 if event is None:
-                    _LOGGER.error("run_docker_events loop ended")
+                    _LOGGER.error(
+                        "Instance %s: run_docker_events loop ended",
+                        self._config[CONF_NAME],
+                    )
+
+                    # Set this to know if we stopped or HASS is stopping
+                    self._dockerStopped = True
+
+                    # Remove the docker info sensors
+                    self.remove_entities()
+
+                    # Remove all the sensors/switches, they will be auto created if connection is working again
+                    for cname in list(self._containers.keys()):
+                        try:
+                            await self._container_remove(cname)
+                        except Exception as err:
+                            _LOGGER.error(
+                                "%s: Stopping gave an error %s", str(err), exc_info=True
+                            )
+                            pass
+
+                    # Stop everything and return to the main thread
+                    self._monitor_stop(self._config[CONF_NAME])
                     break
 
                 # Only monitor container events
@@ -368,6 +424,11 @@ class DockerAPI:
 
         try:
             while True:
+
+                if self._dockerStopped:
+                    _LOGGER.debug("%s: Stopping docker info thread", self._config[CONF_NAME])
+                    break
+
                 info = await self._api.system.info()
                 self._info[DOCKER_INFO_VERSION] = info.get("ServerVersion")
                 self._info[DOCKER_INFO_CONTAINER_RUNNING] = info.get(

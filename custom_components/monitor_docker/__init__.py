@@ -24,6 +24,7 @@ from .const import (
     CONF_CERTPATH,
     CONF_CONTAINERS,
     CONF_MEMORYCHANGE,
+    CONF_PREFIX,
     CONF_RENAME,
     CONF_RETRY,
     CONF_SENSORNAME,
@@ -46,6 +47,7 @@ DEFAULT_SCAN_INTERVAL = timedelta(seconds=10)
 DOCKER_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+        vol.Optional(CONF_PREFIX, default=""): cv.string,
         vol.Optional(CONF_URL, default=None): vol.Any(cv.string, None),
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
         vol.Optional(
@@ -86,21 +88,34 @@ async def async_setup(hass, config):
         hass.data[DOMAIN][entry[CONF_NAME]] = {}
         hass.data[DOMAIN][entry[CONF_NAME]][CONFIG] = entry
 
+        startCount = 0
+
         while True:
+            doLoop = True
+
             try:
-                hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(hass, entry)
+                hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(
+                    hass, entry, startCount
+                )
             except Exception as err:
+                doLoop = False
                 if entry[CONF_RETRY] == 0:
                     raise
                 else:
                     _LOGGER.error("%s", err)
                     _LOGGER.error("Retry in %d seconds", entry[CONF_RETRY])
                     time.sleep(entry[CONF_RETRY])
-            else:
-                break
 
-        # Now run forever in this separated thread
-        loop.run_forever()
+            startCount += 1
+
+            if doLoop:
+                # Now run forever in this separated thread
+                loop.run_forever()
+
+                # We only get here if a docker instance disconnected or HASS is stopping
+                if not hass.data[DOMAIN][entry[CONF_NAME]][API]._dockerStopped:
+                    # If HASS stopped, do not retry
+                    break
 
     # Create domain monitor_docker data variable
     hass.data[DOMAIN] = {}

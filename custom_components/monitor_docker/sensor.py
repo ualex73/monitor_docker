@@ -19,6 +19,7 @@ from .const import (
     ATTR_VERSION_OS_TYPE,
     CONFIG,
     CONF_CONTAINERS,
+    CONF_PREFIX,
     CONF_RENAME,
     CONF_SENSORNAME,
     DOCKER_INFO_VERSION,
@@ -47,7 +48,11 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     name = discovery_info[CONF_NAME]
     api = hass.data[DOMAIN][name][API]
     config = hass.data[DOMAIN][name][CONFIG]
+
+    # Set or overrule prefix
     prefix = config[CONF_NAME]
+    if config[CONF_PREFIX]:
+        prefix = config[CONF_PREFIX]
 
     _LOGGER.debug("Setting up sensor(s)")
 
@@ -146,6 +151,8 @@ class DockerSensor(Entity):
 
     def __init__(self, api, prefix, variable):
         """Initialize the sensor."""
+
+        self._loop = asyncio.get_running_loop()
         self._api = api
         self._prefix = prefix
 
@@ -215,6 +222,18 @@ class DockerSensor(Entity):
         """Return the state attributes."""
         return self._attributes
 
+    async def async_added_to_hass(self):
+        """Register callbacks."""
+        self._api.register_callback(self.event_callback, self._var_id)
+
+    def event_callback(self, remove=False):
+        """Callback to remove Docker entity."""
+
+        if remove:
+            _LOGGER.info("%s: Removing sensor entity: %s", self._prefix, self._var_id)
+            self._loop.create_task(self.async_remove())
+            return
+
 
 class DockerContainerSensor(Entity):
     """Representation of a Docker Sensor."""
@@ -230,6 +249,7 @@ class DockerContainerSensor(Entity):
         condition_list=None,
     ):
         """Initialize the sensor."""
+
         self._loop = asyncio.get_running_loop()
         self._container = container
         self._prefix = prefix
