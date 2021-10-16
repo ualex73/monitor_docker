@@ -45,20 +45,21 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     if discovery_info is None:
         return
 
+    instance = discovery_info[CONF_NAME]
     name = discovery_info[CONF_NAME]
     api = hass.data[DOMAIN][name][API]
     config = hass.data[DOMAIN][name][CONFIG]
 
     # Set or overrule prefix
-    prefix = config[CONF_NAME]
+    prefix = name
     if config[CONF_PREFIX]:
         prefix = config[CONF_PREFIX]
 
-    _LOGGER.debug("Setting up sensor(s)")
+    _LOGGER.debug("[%s]: Setting up sensor(s)", instance)
 
     sensors = []
     sensors = [
-        DockerSensor(api, prefix, variable)
+        DockerSensor(api, instance, prefix, variable)
         for variable in config[CONF_MONITORED_CONDITIONS]
         if variable in DOCKER_MONITOR_LIST
         if CONTAINER not in discovery_info
@@ -88,10 +89,12 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             info = capi.get_info()
             network_available = info.get(CONTAINER_INFO_NETWORK_AVAILABLE)
             if network_available is None:
-                _LOGGER.error("%s: Cannot determine network-available?", cname)
+                _LOGGER.error(
+                    "[%s] %s: Cannot determine network-available?", instance, cname
+                )
                 network_available = False
 
-            _LOGGER.debug("%s: Adding component Sensor(s)", cname)
+            _LOGGER.debug("[%s] %s: Adding component Sensor(s)", instance, cname)
 
             if allinone:
                 monitor_conditions = []
@@ -107,6 +110,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 sensors += [
                     DockerContainerSensor(
                         capi,
+                        instance,
                         prefix,
                         cname,
                         config[CONF_RENAME].get(cname, cname),
@@ -127,6 +131,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                         sensors += [
                             DockerContainerSensor(
                                 capi,
+                                instance,
                                 prefix,
                                 cname,
                                 config[CONF_RENAME].get(cname, cname),
@@ -146,14 +151,16 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     return True
 
 
+#################################################################
 class DockerSensor(Entity):
     """Representation of a Docker Sensor."""
 
-    def __init__(self, api, prefix, variable):
+    def __init__(self, api, instance, prefix, variable):
         """Initialize the sensor."""
 
         self._loop = asyncio.get_running_loop()
         self._api = api
+        self._instance = instance
         self._prefix = prefix
 
         self._var_id = variable
@@ -170,7 +177,9 @@ class DockerSensor(Entity):
         self._state = None
         self._attributes = {}
 
-        _LOGGER.info("Initializing Docker sensor '%s'", self._var_id)
+        _LOGGER.info(
+            "[%s]: Initializing Docker sensor '%s'", self._instance, self._var_id
+        )
 
     @property
     def entity_id(self):
@@ -230,17 +239,21 @@ class DockerSensor(Entity):
         """Callback to remove Docker entity."""
 
         if remove:
-            _LOGGER.info("%s: Removing sensor entity: %s", self._prefix, self._var_id)
+            _LOGGER.info(
+                "[%s]: Removing sensor entity: %s", self._instance, self._var_id
+            )
             self._loop.create_task(self.async_remove())
             return
 
 
+#################################################################
 class DockerContainerSensor(Entity):
     """Representation of a Docker Sensor."""
 
     def __init__(
         self,
         container,
+        instance,
         prefix,
         cname,
         alias,
@@ -251,6 +264,7 @@ class DockerContainerSensor(Entity):
         """Initialize the sensor."""
 
         self._loop = asyncio.get_running_loop()
+        self._instance = instance
         self._container = container
         self._prefix = prefix
         self._cname = cname
@@ -290,12 +304,15 @@ class DockerContainerSensor(Entity):
         self._attributes = {}
 
         _LOGGER.info(
-            "%s: Initializing sensor with parameter: %s", self._cname, self._var_name
+            "[%s] %s: Initializing sensor with parameter: %s",
+            self._instance,
+            self._cname,
+            self._var_name,
         )
 
     @property
     def entity_id(self):
-        """Return the entity id of the cover."""
+        """Return the entity id of the sensor."""
         return self._entity_id
 
     @property
@@ -354,13 +371,23 @@ class DockerContainerSensor(Entity):
         """Callback for update of container information."""
 
         if remove:
-            _LOGGER.info("%s: Removing sensor entity: %s", self._cname, self._var_id)
+            _LOGGER.info(
+                "[%s] %s: Removing sensor entity: %s",
+                self._instance,
+                self._cname,
+                self._var_id,
+            )
             self._loop.create_task(self.async_remove())
             return
 
         state = None
 
-        _LOGGER.debug("%s: Received callback for: %s", self._cname, self._var_name)
+        _LOGGER.debug(
+            "[%s] %s: Received callback for: %s",
+            self._instance,
+            self._cname,
+            self._var_name,
+        )
 
         stats = {}
 
@@ -371,7 +398,12 @@ class DockerContainerSensor(Entity):
                 stats = self._container.get_stats()
 
         except Exception as err:
-            _LOGGER.error("%s: Cannot request container info", str(err))
+            _LOGGER.error(
+                "[%s] %s: Cannot request container info (%s)",
+                self._instance,
+                self._cname,
+                str(err),
+            )
         else:
             if self._var_id == CONTAINER_INFO_ALLINONE:
                 # The state is mandatory
@@ -412,5 +444,8 @@ class DockerContainerSensor(Entity):
                 self.schedule_update_ha_state()
             except Exception as err:
                 _LOGGER.error(
-                    "Failed 'schedule_update_ha_state' %s", str(err), exc_info=True
+                    "[%s] %s: Failed 'schedule_update_ha_state' (%s)",
+                    self._instance,
+                    self._cname,
+                    str(err),
                 )
