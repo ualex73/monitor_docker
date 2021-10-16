@@ -164,9 +164,21 @@ class DockerAPI:
             )
             return
 
-        version = self._loop.run_until_complete(self._api.version())
+        versionInfo = self._loop.run_until_complete(self._api.version())
+        version = versionInfo.get("Version", None)
+
+        # Compare version with 19.03 when memory calculation has changed
+        version1904 = None
+        if version is not None:
+            if tuple(map(int, (version.split(".")))) > tuple(
+                map(int, ("19.03".split(".")))
+            ):
+                version1904 = True
+            else:
+                version1904 = False
+
         _LOGGER.debug(
-            "[%s]: Docker version: %s", self._instance, version.get("Version", None)
+            "[%s]: Docker version: %s (%s)", self._instance, version, version1904
         )
 
         # Start task to monitor events of create/delete/start/stop
@@ -193,6 +205,7 @@ class DockerAPI:
                 cname,
                 self._interval,
                 memChange=self._config[CONF_MEMORYCHANGE],
+                version1904=version1904,
             )
 
         hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
@@ -633,8 +646,18 @@ class DockerAPI:
 class DockerContainerAPI:
     """Docker Container API abstraction."""
 
-    def __init__(self, api, instance, name, interval, atInit=True, memChange=100):
+    def __init__(
+        self,
+        api,
+        instance,
+        name,
+        interval,
+        atInit=True,
+        memChange=100,
+        version1904=None,
+    ):
         self._api = api
+        self._version1904 = version1904
         self._instance = instance
         self._name = name
         self._interval = interval
@@ -884,20 +907,28 @@ class DockerContainerAPI:
 
         # Gather memory information
         memory_stats = {}
-        try:
-            # Workaround for Debian 11 vs 10
-            if "cache" in raw["memory_stats"]["stats"]:
-                # Memory is in Bytes, convert to MBytes
-                memory_stats["usage"] = toMB(
-                    raw["memory_stats"]["usage"] - raw["memory_stats"]["stats"]["cache"]
-                )
-                memory_stats["max_usage"] = toMB(raw["memory_stats"]["max_usage"])
-            else:
-                memory_stats["usage"] = toMB(
-                    raw["memory_stats"]["usage"]
-                    - raw["memory_stats"]["stats"]["inactive_file"]
-                )
 
+        try:
+            memory_stats["usage"] = None
+
+            cache = 0
+            # https://docs.docker.com/engine/reference/commandline/stats/
+            if self._version1904:
+                # Version is 19.04 or higher, don't use "cache"
+                if "total_inactive_file" in raw["memory_stats"]["stats"]:
+                    cache = raw["memory_stats"]["stats"]["total_inactive_file"]
+                elif "inactive_file" in raw["memory_stats"]["stats"]:
+                    cache = raw["memory_stats"]["stats"]["inactive_file"]
+            else:
+                # Version is 19.03 and lower, use "cache"
+                if "cache" in raw["memory_stats"]["stats"]:
+                    cache = raw["memory_stats"]["stats"]["cache"]
+                elif "total_inactive_file" in raw["memory_stats"]["stats"]:
+                    cache = raw["memory_stats"]["stats"]["total_inactive_file"]
+                elif "inactive_file" in raw["memory_stats"]["stats"]:
+                    cache = raw["memory_stats"]["stats"]["inactive_file"]
+
+            memory_stats["usage"] = toMB(raw["memory_stats"]["usage"] - cache)
             memory_stats["limit"] = toMB(raw["memory_stats"]["limit"])
             memory_stats["usage_percent"] = round(
                 float(memory_stats["usage"]) / float(memory_stats["limit"]) * 100.0,
