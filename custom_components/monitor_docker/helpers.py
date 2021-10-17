@@ -31,6 +31,11 @@ from .const import (
     COMPONENTS,
     CONF_CERTPATH,
     CONF_MEMORYCHANGE,
+    CONF_PRECISION_CPU,
+    CONF_PRECISION_MEMORY_MB,
+    CONF_PRECISION_MEMORY_PERCENTAGE,
+    CONF_PRECISION_NETWORK_KB,
+    CONF_PRECISION_NETWORK_MB,
     CONTAINER,
     CONTAINER_STATS_CPU_PERCENTAGE,
     CONTAINER_STATS_1CPU_PERCENTAGE,
@@ -65,14 +70,14 @@ VERSION = "1.11"
 _LOGGER = logging.getLogger(__name__)
 
 
-def toKB(value):
+def toKB(value, precision=PRECISION):
     """Converts bytes to kBytes."""
-    return round(value / (1024 ** 1), PRECISION)
+    return round(value / (1024 ** 1), precision)
 
 
-def toMB(value):
+def toMB(value, precision=PRECISION):
     """Converts bytes to MBytes."""
-    return round(value / (1024 ** 2), PRECISION)
+    return round(value / (1024 ** 2), precision)
 
 
 #################################################################
@@ -168,17 +173,17 @@ class DockerAPI:
         version = versionInfo.get("Version", None)
 
         # Compare version with 19.03 when memory calculation has changed
-        version1904 = None
+        self._version1904 = None
         if version is not None:
             if tuple(map(int, (version.split(".")))) > tuple(
                 map(int, ("19.03".split(".")))
             ):
-                version1904 = True
+                self._version1904 = True
             else:
-                version1904 = False
+                self._version1904 = False
 
         _LOGGER.debug(
-            "[%s]: Docker version: %s (%s)", self._instance, version, version1904
+            "[%s]: Docker version: %s (%s)", self._instance, version, self._version1904
         )
 
         # Start task to monitor events of create/delete/start/stop
@@ -200,12 +205,10 @@ class DockerAPI:
 
             # Create our Docker Container API
             self._containers[cname] = DockerContainerAPI(
+                self._config,
                 self._api,
-                self._instance,
                 cname,
-                self._interval,
-                memChange=self._config[CONF_MEMORYCHANGE],
-                version1904=version1904,
+                version1904=self._version1904,
             )
 
         hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
@@ -429,12 +432,7 @@ class DockerAPI:
 
         # Create our Docker Container API
         self._containers[cname] = DockerContainerAPI(
-            self._api,
-            self._instance,
-            cname,
-            self._interval,
-            atInit=False,
-            memChange=self._config[CONF_MEMORYCHANGE],
+            self._config, self._api, cname, atInit=False, version1904=self._version1904
         )
 
         # We should wait until container is attached
@@ -533,17 +531,20 @@ class DockerAPI:
                     self._info[ATTR_MEMORY_LIMIT] is not None
                     and self._info[ATTR_MEMORY_LIMIT] != 0
                 ):
-                    self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = round(
+                    self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = (
                         self._info[DOCKER_STATS_MEMORY]
-                        / toMB(self._info[ATTR_MEMORY_LIMIT])
-                        * 100,
-                        PRECISION,
+                        / toMB(
+                            self._info[ATTR_MEMORY_LIMIT],
+                            self._config[CONF_PRECISION_MEMORY_PERCENTAGE],
+                        )
+                        * 100
                     )
 
                 # Try to fix possible 0 values in history at start-up
                 if loopInit:
                     self._info[DOCKER_STATS_CPU_PERCENTAGE] = round(
-                        self._info[DOCKER_STATS_CPU_PERCENTAGE], PRECISION
+                        self._info[DOCKER_STATS_CPU_PERCENTAGE],
+                        self._config[CONF_PRECISION_CPU],
                     )
 
                     # Calculate for 0-100%
@@ -555,21 +556,26 @@ class DockerAPI:
                                 self._info[DOCKER_STATS_CPU_PERCENTAGE]
                                 / self._info[ATTR_ONLINE_CPUS]
                             ),
-                            PRECISION,
+                            self._config[CONF_PRECISION_CPU],
                         )
 
                     self._info[DOCKER_STATS_MEMORY] = round(
-                        self._info[DOCKER_STATS_MEMORY], PRECISION
+                        self._info[DOCKER_STATS_MEMORY],
+                        self._config[CONF_PRECISION_MEMORY_MB],
                     )
 
                     self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = round(
-                        self._info[DOCKER_STATS_MEMORY_PERCENTAGE], PRECISION
+                        self._info[DOCKER_STATS_MEMORY_PERCENTAGE],
+                        self._config[CONF_PRECISION_MEMORY_PERCENTAGE],
                     )
                 else:
                     self._info[DOCKER_STATS_CPU_PERCENTAGE] = (
                         None
                         if self._info[DOCKER_STATS_CPU_PERCENTAGE] == 0.0
-                        else round(self._info[DOCKER_STATS_CPU_PERCENTAGE], PRECISION)
+                        else round(
+                            self._info[DOCKER_STATS_CPU_PERCENTAGE],
+                            self._config[CONF_PRECISION_CPU],
+                        )
                     )
 
                     # Calculate for 0-100%
@@ -583,20 +589,24 @@ class DockerAPI:
                                 self._info[DOCKER_STATS_CPU_PERCENTAGE]
                                 / self._info[ATTR_ONLINE_CPUS]
                             ),
-                            PRECISION,
+                            self._config[CONF_PRECISION_CPU],
                         )
 
                     self._info[DOCKER_STATS_MEMORY] = (
                         None
                         if self._info[DOCKER_STATS_MEMORY] == 0.0
-                        else round(self._info[DOCKER_STATS_MEMORY], PRECISION)
+                        else round(
+                            self._info[DOCKER_STATS_MEMORY],
+                            self._config[CONF_PRECISION_MEMORY_MB],
+                        )
                     )
 
                     self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = (
                         None
                         if self._info[DOCKER_STATS_MEMORY_PERCENTAGE] == 0.0
                         else round(
-                            self._info[DOCKER_STATS_MEMORY_PERCENTAGE], PRECISION
+                            self._info[DOCKER_STATS_MEMORY_PERCENTAGE],
+                            self._config[CONF_PRECISION_MEMORY_PERCENTAGE],
                         )
                     )
 
@@ -648,22 +658,21 @@ class DockerContainerAPI:
 
     def __init__(
         self,
+        config,
         api,
-        instance,
-        name,
-        interval,
+        cname,
         atInit=True,
-        memChange=100,
         version1904=None,
     ):
+        self._config = config
         self._api = api
         self._version1904 = version1904
-        self._instance = instance
-        self._name = name
-        self._interval = interval
+        self._instance = config[CONF_NAME]
+        self._memChange = config[CONF_MEMORYCHANGE]
+        self._name = cname
+        self._interval = config[CONF_SCAN_INTERVAL].seconds
         self._busy = False
         self._atInit = atInit
-        self._memChange = memChange
         self._task = None
         self._subscribers = []
         self._cpu_old = {}
@@ -928,8 +937,12 @@ class DockerContainerAPI:
                 elif "inactive_file" in raw["memory_stats"]["stats"]:
                     cache = raw["memory_stats"]["stats"]["inactive_file"]
 
-            memory_stats["usage"] = toMB(raw["memory_stats"]["usage"] - cache)
-            memory_stats["limit"] = toMB(raw["memory_stats"]["limit"])
+            memory_stats["usage"] = toMB(
+                raw["memory_stats"]["usage"] - cache, self._config[CONF_PRECISION_MEMORY_MB]
+            )
+            memory_stats["limit"] = toMB(
+                raw["memory_stats"]["limit"], self._config[CONF_PRECISION_MEMORY_MB]
+            )
             memory_stats["usage_percent"] = round(
                 float(memory_stats["usage"]) / float(memory_stats["limit"]) * 100.0,
                 PRECISION,
@@ -1058,14 +1071,22 @@ class DockerContainerAPI:
                     ).total_seconds()
 
                     # Calculate speed, also convert to kByte/sec
-                    network_stats["speed_tx"] = toKB(round(float(tx) / tim, PRECISION))
-                    network_stats["speed_rx"] = toKB(round(float(rx) / tim, PRECISION))
+                    network_stats["speed_tx"] = toKB(
+                        float(tx) / tim, self._config[CONF_PRECISION_NETWORK_KB]
+                    )
+                    network_stats["speed_rx"] = toKB(
+                        float(rx) / tim, self._config[CONF_PRECISION_NETWORK_KB]
+                    )
 
                 self._network_old = network_new
 
                 # Convert total to MB
-                network_stats["total_tx"] = toMB(network_stats["total_tx"])
-                network_stats["total_rx"] = toMB(network_stats["total_rx"])
+                network_stats["total_tx"] = toMB(
+                    network_stats["total_tx"], self._config[CONF_PRECISION_NETWORK_MB]
+                )
+                network_stats["total_rx"] = toMB(
+                    network_stats["total_rx"], self._config[CONF_PRECISION_NETWORK_MB]
+                )
 
             except KeyError as err:
                 _LOGGER.error(
@@ -1107,8 +1128,10 @@ class DockerContainerAPI:
         stats[CONTAINER_STATS_CPU_PERCENTAGE] = cpu_stats.get("total")
         if "online_cpus" in cpu_stats and cpu_stats.get("total") is not None:
             stats[CONTAINER_STATS_1CPU_PERCENTAGE] = round(
-                cpu_stats.get("total") / cpu_stats["online_cpus"], PRECISION
+                cpu_stats.get("total") / cpu_stats["online_cpus"],
+                self._config[CONF_PRECISION_CPU],
             )
+
         stats[CONTAINER_STATS_MEMORY] = memory_stats.get("usage")
         stats[CONTAINER_STATS_MEMORY_PERCENTAGE] = memory_stats.get("usage_percent")
         stats[CONTAINER_STATS_NETWORK_SPEED_UP] = network_stats.get("speed_tx")
