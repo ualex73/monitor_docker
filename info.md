@@ -175,6 +175,7 @@ Here are some possible questions/errors with their answers.
         - SERVICES=1
         - SESSSION=1
         - SWARM=1
+        - POST=1
     ```
     Add the following to your `configuration.yaml`:
 ```yaml
