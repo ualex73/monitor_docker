@@ -115,7 +115,7 @@ class DockerAPI:
                 url = url.replace("unix://", "unix:///")
 
             # When we reconnect with tcp, we should delay - docker is maybe not fully ready
-            if startCount > 0 and url.find("unix:") != 0:
+            if startCount > 0 and url is not None and url.find("unix:") != 0:
                 time.sleep(5)
 
             # Do some debugging logging for TCP/TLS
@@ -938,7 +938,8 @@ class DockerContainerAPI:
                     cache = raw["memory_stats"]["stats"]["inactive_file"]
 
             memory_stats["usage"] = toMB(
-                raw["memory_stats"]["usage"] - cache, self._config[CONF_PRECISION_MEMORY_MB]
+                raw["memory_stats"]["usage"] - cache,
+                self._config[CONF_PRECISION_MEMORY_MB],
             )
             memory_stats["limit"] = toMB(
                 raw["memory_stats"]["limit"], self._config[CONF_PRECISION_MEMORY_MB]
