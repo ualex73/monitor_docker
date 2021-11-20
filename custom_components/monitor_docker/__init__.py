@@ -115,7 +115,7 @@ async def async_setup(hass, config):
                 if entry[CONF_RETRY] == 0:
                     raise
                 else:
-                    _LOGGER.error("%s", err)
+                    _LOGGER.error("%s", str(err))
                     _LOGGER.error("Retry in %d seconds", entry[CONF_RETRY])
                     time.sleep(entry[CONF_RETRY])
 
