@@ -65,7 +65,7 @@ from .const import (
     PRECISION,
 )
 
-VERSION = "1.11"
+VERSION = "1.12b2"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -175,12 +175,18 @@ class DockerAPI:
         # Compare version with 19.03 when memory calculation has changed
         self._version1904 = None
         if version is not None:
-            if tuple(map(int, (version.split(".")))) > tuple(
-                map(int, ("19.03".split(".")))
-            ):
+            try:
+                if tuple(map(int, (version.split(".")[0:2]))) > tuple(
+                    map(int, ("19.03".split(".")))
+                ):
+                    self._version1904 = True
+                else:
+                    self._version1904 = False
+            except ValueError as err:
+                _LOGGER.error(
+                    "[%s]: ValueError in version '%s' ", self._instance, version
+                )
                 self._version1904 = True
-            else:
-                self._version1904 = False
 
         _LOGGER.debug(
             "[%s]: Docker version: %s (%s)", self._instance, version, self._version1904
