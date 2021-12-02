@@ -246,7 +246,9 @@ monitor_docker:
   ```
   $ sudo usermod -a -G docker <user>
   $ sudo reboot
-  ```
+  ```  
+11. **Question:** Can you add the feature to check if images are update in e.g. hub.docker.com?  
+    **Answer:** Such feature goes outside of the scope of monitor_docker and there are few other options available for this. You can use https://newreleases.io or https://github.com/crazy-max/diun/    
 
 ## Credits
 
