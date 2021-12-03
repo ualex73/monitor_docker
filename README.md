@@ -236,19 +236,21 @@ monitor_docker:
 6. **Question:** Can create, delete or re-create of a container be implemented in the integration?  
     **Answer:** The used Docker library has no easy (and safe) way to handle such functionality. Please use *docker-compose* to handle such operations. If anybody can make this fully and safe working, I am happy to merge the PR   
 7. **Question:** Can you add more security to a switch?  
-  **Answer:** No, this isn't possible from the integration. You need to do this directly in Lovelace itself, with the card e.g. https://github.com/iantrich/restriction-card  
+    **Answer:** No, this isn't possible from the integration. You need to do this directly in Lovelace itself, with the card e.g. https://github.com/iantrich/restriction-card  
 8. **Question:** All the report memories values are 0 (zero), can this be fixed in the integration?  
-  **Answer:** No, the integration just uses the available information from the API and you should fix your Docker   
+    **Answer:** No, the integration just uses the available information from the API and you should fix your Docker   
 9. **Question:** It is possible to monitor HASS.IO?  
-  **Answer:** Yes, please use the Docker Socker Proxy https://github.com/Tecnativa/docker-socket-proxy and configure tcp://ip:port to connect to the proxy. This has been tested and verified by other users, but I cannot give support on it.   
+    **Answer:** Yes, please use the Docker Socker Proxy https://github.com/Tecnativa/docker-socket-proxy and configure tcp://ip:port to connect to the proxy. This has been tested and verified by other users, but I cannot give support on it.   
 10. **Question:** I get a permission denied error?  
-  **Answer:** In general Docker and HASS.IO are running as root and always can connect to /var/run/docker.sock. If you run in a venv environment or directly with Python, you may need to add "docker" to the user used for Home Assistant. The following commands may help you, and it is recommended to reboot after "usermod":
+     **Answer:** In general Docker and HASS.IO are running as root and always can connect to /var/run/docker.sock. If you run in a venv environment or directly with Python, you may need to add "docker" to the user used for Home Assistant. The following commands may help you, and it is recommended to reboot after "usermod":
   ```
   $ sudo usermod -a -G docker <user>
   $ sudo reboot
   ```  
 11. **Question:** Can you add the feature to check if images are update in e.g. hub.docker.com?  
-    **Answer:** Such feature goes outside of the scope of monitor_docker and there are few other options available for this. You can use https://newreleases.io or https://github.com/crazy-max/diun/    
+     **Answer:** Such feature goes outside of the scope of monitor_docker and there are few other options available for this. You can use https://newreleases.io or https://github.com/crazy-max/diun/    
+12. **Question:** Is Docker via SSH supported?  
+     **Answer:** No, the Docker library used, does not support it. There is a small _but_, maybe you can get it to work via `socat`. The following URL may help you: https://serverfault.com/questions/127794/forward-local-port-or-socket-file-to-remote-socket-file/362833#362833
 
 ## Credits
 
