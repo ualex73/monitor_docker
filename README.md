@@ -113,6 +113,7 @@ monitor_docker:
 | scan_interval               | time_period  (Optional)  | Update interval. Defaults to 10 seconds.                              |
 | certpath                    | string       (Optional)  | If TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS.|
 | containers                  | list         (Optional)  | Array of containers to monitor. Defaults to all containers.           |
+| containers_exclude          | list         (Optional)  | Array of containers to be excluded from monitoring, when all containrs are included. |
 | monitored_conditions        | list         (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
 | rename                      | dictionary   (Optional)  | Dictionary of containers to rename. Default no renaming.              |
 | sensorname                  | string       (Optional)  | Sensor string to format the name used in Home Assistant. Defaults to `{name} {sensor}`, where `{name}` is the container name and `{sensor}` is e.g. Memory, Status, Network speed Up |

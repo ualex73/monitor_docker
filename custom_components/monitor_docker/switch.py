@@ -14,6 +14,7 @@ from .const import (
     ATTR_NAME,
     ATTR_SERVER,
     CONF_CONTAINERS,
+    CONF_CONTAINERS_EXCLUDE,
     CONF_PREFIX,
     CONF_RENAME,
     CONF_SWITCHENABLED,
@@ -98,7 +99,14 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         clist = api.list_containers()
 
     for cname in clist:
+        inludeContainer = False
         if cname in config[CONF_CONTAINERS] or not config[CONF_CONTAINERS]:
+            includeContainer = True
+
+        if config[CONF_CONTAINERS_EXCLUDE] and cname in config[CONF_CONTAINERS_EXCLUDE]:
+            includeContainer = False
+
+        if includeContainer:
             _LOGGER.debug("[%s] %s: Adding component Switch", instance, cname)
 
             switches.append(

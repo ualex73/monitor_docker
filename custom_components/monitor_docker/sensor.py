@@ -19,6 +19,7 @@ from .const import (
     ATTR_VERSION_OS_TYPE,
     CONFIG,
     CONF_CONTAINERS,
+    CONF_CONTAINERS_EXCLUDE,
     CONF_PREFIX,
     CONF_RENAME,
     CONF_SENSORNAME,
@@ -83,7 +84,15 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             config[CONF_MONITORED_CONDITIONS].remove(CONTAINER_INFO_STATE)
 
     for cname in clist:
+
+        includeContainer = False
         if cname in config[CONF_CONTAINERS] or not config[CONF_CONTAINERS]:
+            includeContainer = True
+
+        if config[CONF_CONTAINERS_EXCLUDE] and cname in config[CONF_CONTAINERS_EXCLUDE]:
+            includeContainer = False
+
+        if includeContainer:
             # Try to figure out if we should include any network sensors
             capi = api.get_container(cname)
             info = capi.get_info()

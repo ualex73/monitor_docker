@@ -7,6 +7,7 @@ CONTAINER = "container"
 
 CONF_CERTPATH = "certpath"
 CONF_CONTAINERS = "containers"
+CONF_CONTAINERS_EXCLUDE = "containers_exclude"
 CONF_MEMORYCHANGE = "memorychange"
 CONF_PRECISION_CPU = "precision_cpu"
 CONF_PRECISION_MEMORY_MB = "precision_memory_mb"
