@@ -168,7 +168,7 @@ class DockerContainerSwitch(SwitchEntity):
         return "mdi:docker"
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         return {}
 
     @property

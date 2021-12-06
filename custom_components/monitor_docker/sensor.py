@@ -236,7 +236,7 @@ class DockerSensor(Entity):
             self._state = info.get(self._var_id)
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the state attributes."""
         return self._attributes
 
@@ -365,7 +365,7 @@ class DockerContainerSensor(Entity):
         return self._var_unit
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the state attributes."""
         return self._attributes
 
