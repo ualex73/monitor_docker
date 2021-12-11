@@ -65,7 +65,7 @@ from .const import (
     PRECISION,
 )
 
-VERSION = "1.14b1"
+VERSION = "1.14b2"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -762,9 +762,14 @@ class DockerContainerAPI:
                         self._name,
                     )
 
-                await asyncio.sleep(self._interval)
             except concurrent.futures._base.CancelledError:
+                _LOGGER.debug(
+                    "[%s] %s: Container received concurrent.futures._base.CancelledError",
+                    self._instance,
+                    self._name,
+                )
                 pass
+                break
             except Exception as err:
                 _LOGGER.error(
                     "[%s] %s: Container not available anymore (3) (%s)",
@@ -773,6 +778,9 @@ class DockerContainerAPI:
                     str(err),
                     exc_info=True,
                 )
+
+            # Sleep in normal and exception situation
+            await asyncio.sleep(self._interval)
 
     #############################################################
     async def _run_container_info(self):
