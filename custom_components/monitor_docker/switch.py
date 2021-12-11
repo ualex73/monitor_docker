@@ -149,6 +149,7 @@ class DockerContainerSwitch(SwitchEntity):
             slugify(self._prefix + "_" + self._cname)
         )
         self._name = name_format.format(name=alias)
+        self._removed = False
 
     @property
     def entity_id(self):
@@ -197,8 +198,13 @@ class DockerContainerSwitch(SwitchEntity):
         """Callback for update of container information."""
 
         if remove:
+            # If already called before, do not remove it again
+            if self._removed:
+                return
+
             _LOGGER.info("[%s] %s: Removing switch entity", self._instance, self._cname)
             self._loop.create_task(self.async_remove())
+            self._removed = True
             return
 
         state = None

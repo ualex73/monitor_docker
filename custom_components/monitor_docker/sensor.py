@@ -185,6 +185,7 @@ class DockerSensor(Entity):
 
         self._state = None
         self._attributes = {}
+        self._removed = False
 
         _LOGGER.info(
             "[%s]: Initializing Docker sensor '%s'", self._instance, self._var_id
@@ -247,11 +248,16 @@ class DockerSensor(Entity):
     def event_callback(self, remove=False):
         """Callback to remove Docker entity."""
 
+        # If already called before, do not remove it again
+        if self._removed:
+            return
+
         if remove:
             _LOGGER.info(
                 "[%s]: Removing sensor entity: %s", self._instance, self._var_id
             )
             self._loop.create_task(self.async_remove())
+            self._removed = True
             return
 
 
@@ -311,6 +317,7 @@ class DockerContainerSensor(Entity):
         self._state_extra = None
 
         self._attributes = {}
+        self._removed = False
 
         _LOGGER.info(
             "[%s] %s: Initializing sensor with parameter: %s",
@@ -380,6 +387,10 @@ class DockerContainerSensor(Entity):
         """Callback for update of container information."""
 
         if remove:
+            # If already called before, do not remove it again
+            if self._removed:
+                return
+
             _LOGGER.info(
                 "[%s] %s: Removing sensor entity: %s",
                 self._instance,
@@ -387,6 +398,7 @@ class DockerContainerSensor(Entity):
                 self._var_id,
             )
             self._loop.create_task(self.async_remove())
+            self._removed = True
             return
 
         state = None
