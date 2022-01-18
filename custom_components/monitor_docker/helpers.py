@@ -874,10 +874,12 @@ class DockerContainerAPI:
             # Compatibility wih older Docker API
             if "online_cpus" in raw["cpu_stats"]:
                 cpu_stats["online_cpus"] = raw["cpu_stats"]["online_cpus"]
-            else:
+            elif "percpu_usage" in raw["cpu_stats"]["cpu_usage"]:
                 cpu_stats["online_cpus"] = len(
                     raw["cpu_stats"]["cpu_usage"]["percpu_usage"] or []
                 )
+            else:
+                cpu_stats["online_cpus"] = 1
 
             # Calculate cpu usage, but first iteration we don't know it
             if self._cpu_old:
