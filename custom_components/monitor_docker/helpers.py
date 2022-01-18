@@ -938,20 +938,21 @@ class DockerContainerAPI:
 
             cache = 0
             # https://docs.docker.com/engine/reference/commandline/stats/
-            if self._version1904:
-                # Version is 19.04 or higher, don't use "cache"
-                if "total_inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["total_inactive_file"]
-                elif "inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["inactive_file"]
-            else:
-                # Version is 19.03 and lower, use "cache"
-                if "cache" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["cache"]
-                elif "total_inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["total_inactive_file"]
-                elif "inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["inactive_file"]
+            if "stats" in raw["memory_stats"]:
+                if self._version1904:
+                    # Version is 19.04 or higher, don't use "cache"
+                    if "total_inactive_file" in raw["memory_stats"]["stats"]:
+                        cache = raw["memory_stats"]["stats"]["total_inactive_file"]
+                    elif "inactive_file" in raw["memory_stats"]["stats"]:
+                        cache = raw["memory_stats"]["stats"]["inactive_file"]
+                else:
+                    # Version is 19.03 and lower, use "cache"
+                    if "cache" in raw["memory_stats"]["stats"]:
+                        cache = raw["memory_stats"]["stats"]["cache"]
+                    elif "total_inactive_file" in raw["memory_stats"]["stats"]:
+                        cache = raw["memory_stats"]["stats"]["total_inactive_file"]
+                    elif "inactive_file" in raw["memory_stats"]["stats"]:
+                        cache = raw["memory_stats"]["stats"]["inactive_file"]
 
             memory_stats["usage"] = toMB(
                 raw["memory_stats"]["usage"] - cache,
