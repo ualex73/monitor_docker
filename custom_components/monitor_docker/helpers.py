@@ -65,7 +65,7 @@ from .const import (
     PRECISION,
 )
 
-VERSION = "1.14b3"
+VERSION = "1.14"
 
 _LOGGER = logging.getLogger(__name__)
 
