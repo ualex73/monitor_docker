@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 
 from homeassistant.components.sensor import ENTITY_ID_FORMAT
 from homeassistant.const import CONF_NAME, CONF_MONITORED_CONDITIONS
@@ -42,6 +43,14 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up the Monitor Docker Sensor."""
+
+    def find_rename(d, item):
+
+        for k in d:
+            if re.match(k, item):
+                return d[k]
+
+        return item
 
     if discovery_info is None:
         return
@@ -122,7 +131,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                         instance,
                         prefix,
                         cname,
-                        config[CONF_RENAME].get(cname, cname),
+                        find_rename(config[CONF_RENAME], cname),
                         CONTAINER_INFO_ALLINONE,
                         config[CONF_SENSORNAME],
                         condition_list=monitor_conditions,
@@ -143,7 +152,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                                 instance,
                                 prefix,
                                 cname,
-                                config[CONF_RENAME].get(cname, cname),
+                                find_rename(config[CONF_RENAME], cname),
                                 variable,
                                 config[CONF_SENSORNAME],
                             )

@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 import voluptuous as vol
 
 from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
@@ -70,6 +71,14 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 "Service restart failed, container '%s' is not configured", cname
             )
 
+    def find_rename(d, item):
+
+        for k in d:
+            if re.match(k, item):
+                return d[k]
+
+        return item
+
     if discovery_info is None:
         return
 
@@ -116,7 +125,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                     instance,
                     prefix,
                     cname,
-                    config[CONF_RENAME].get(cname, cname),
+                    find_rename(config[CONF_RENAME], cname),
                     config[CONF_SWITCHNAME],
                 )
             )
