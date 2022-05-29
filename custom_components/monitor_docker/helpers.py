@@ -795,9 +795,11 @@ class DockerContainerAPI:
 
         self._info[CONTAINER_INFO_STATE] = raw["State"]["Status"]
         self._info[CONTAINER_INFO_IMAGE] = raw["Config"]["Image"]
-        self._info[CONTAINER_INFO_NETWORK_AVAILABLE] = (
-            False if raw["HostConfig"]["NetworkMode"] in ["host", "none"] else True
-        )
+
+        if CONTAINER_INFO_NETWORK_AVAILABLE not in self._info:
+            self._info[CONTAINER_INFO_NETWORK_AVAILABLE] = (
+                False if raw["HostConfig"]["NetworkMode"] in ["host", "none"] else True
+            )
 
         try:
             self._info[CONTAINER_INFO_HEALTH] = raw["State"]["Health"]["Status"]
