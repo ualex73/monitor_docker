@@ -500,8 +500,8 @@ class DockerAPI:
 
                 self._info[ATTR_MEMORY_LIMIT] = info.get("MemTotal")
                 self._info[ATTR_ONLINE_CPUS] = info.get("NCPU")
-                self._info[ATTR_VERSION_OS] = info.get("OperationSystem")
-                self._info[ATTR_VERSION_OS_TYPE] = info.get("OStype")
+                self._info[ATTR_VERSION_OS] = info.get("OperatingSystem")
+                self._info[ATTR_VERSION_OS_TYPE] = info.get("OSType")
                 self._info[ATTR_VERSION_ARCH] = info.get("Architecture")
                 self._info[ATTR_VERSION_KERNEL] = info.get("KernelVersion")
 
