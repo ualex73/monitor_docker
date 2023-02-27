@@ -4,9 +4,8 @@ import asyncio
 import logging
 import re
 
-from homeassistant.components.sensor import ENTITY_ID_FORMAT
+from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorEntity
 from homeassistant.const import CONF_NAME, CONF_MONITORED_CONDITIONS
-from homeassistant.helpers.entity import Entity
 from homeassistant.util import slugify
 
 from .const import (
@@ -170,7 +169,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
 
 #################################################################
-class DockerSensor(Entity):
+class DockerSensor(SensorEntity):
     """Representation of a Docker Sensor."""
 
     def __init__(self, api, instance, prefix, variable):
@@ -277,7 +276,7 @@ class DockerSensor(Entity):
 
 
 #################################################################
-class DockerContainerSensor(Entity):
+class DockerContainerSensor(SensorEntity):
     """Representation of a Docker Sensor."""
 
     def __init__(
