@@ -60,41 +60,43 @@ CONTAINER_STATS_NETWORK_TOTAL_UP = "network_total_up"
 CONTAINER_STATS_NETWORK_TOTAL_DOWN = "network_total_down"
 
 DOCKER_MONITOR_LIST = {
-    DOCKER_INFO_VERSION: ["Version", None, "mdi:information-outline", None],
-    DOCKER_INFO_CONTAINER_RUNNING: ["Containers Running", None, "mdi:docker", None],
-    DOCKER_INFO_CONTAINER_PAUSED: ["Containers Paused", None, "mdi:docker", None],
-    DOCKER_INFO_CONTAINER_STOPPED: ["Containers Stopped", None, "mdi:docker", None],
-    DOCKER_INFO_CONTAINER_TOTAL: ["Containers Total", None, "mdi:docker", None],
-    DOCKER_STATS_CPU_PERCENTAGE: ["CPU", "%", "mdi:chip", None],
-    DOCKER_STATS_1CPU_PERCENTAGE: ["1CPU", "%", "mdi:chip", None],
-    DOCKER_STATS_MEMORY: ["Memory", "MB", "mdi:memory", None],
-    DOCKER_STATS_MEMORY_PERCENTAGE: ["Memory (percent)", "%", "mdi:memory", None],
-    DOCKER_INFO_IMAGES: ["Images", None, "mdi:docker", None],
+    DOCKER_INFO_VERSION: ["Version", None, "mdi:information-outline", None, None],
+    DOCKER_INFO_CONTAINER_RUNNING: ["Containers Running", None, "mdi:docker", None, None],
+    DOCKER_INFO_CONTAINER_PAUSED: ["Containers Paused", None, "mdi:docker", None, None],
+    DOCKER_INFO_CONTAINER_STOPPED: ["Containers Stopped", None, "mdi:docker", None, None],
+    DOCKER_INFO_CONTAINER_TOTAL: ["Containers Total", None, "mdi:docker", None, None],
+    DOCKER_STATS_CPU_PERCENTAGE: ["CPU", "%", "mdi:chip", None, "measurement"],
+    DOCKER_STATS_1CPU_PERCENTAGE: ["1CPU", "%", "mdi:chip", None, "measurement"],
+    DOCKER_STATS_MEMORY: ["Memory", "MB", "mdi:memory", None, "measurement"],
+    DOCKER_STATS_MEMORY_PERCENTAGE: ["Memory (percent)", "%", "mdi:memory", None, "measurement"],
+    DOCKER_INFO_IMAGES: ["Images", None, "mdi:docker", None, None],
 }
 
 CONTAINER_MONITOR_LIST = {
-    CONTAINER_INFO_STATE: ["State", None, "mdi:checkbox-marked-circle-outline", None],
-    CONTAINER_INFO_HEALTH: ["Health", None, "mdi:heart-pulse", None],
-    CONTAINER_INFO_STATUS: ["Status", None, "mdi:checkbox-marked-circle-outline", None],
-    CONTAINER_INFO_UPTIME: ["Up Time", "", "mdi:clock", "timestamp"],
-    CONTAINER_INFO_IMAGE: ["Image", None, "mdi:information-outline", None],
-    CONTAINER_STATS_CPU_PERCENTAGE: ["CPU", "%", "mdi:chip", None],
-    CONTAINER_STATS_1CPU_PERCENTAGE: ["1CPU", "%", "mdi:chip", None],
-    CONTAINER_STATS_MEMORY: ["Memory", "MB", "mdi:memory", None],
-    CONTAINER_STATS_MEMORY_PERCENTAGE: ["Memory (percent)", "%", "mdi:memory", None],
-    CONTAINER_STATS_NETWORK_SPEED_UP: ["Network speed Up", "kB/s", "mdi:upload", None],
+    CONTAINER_INFO_STATE: ["State", None, "mdi:checkbox-marked-circle-outline", None, None],
+    CONTAINER_INFO_HEALTH: ["Health", None, "mdi:heart-pulse", None, None],
+    CONTAINER_INFO_STATUS: ["Status", None, "mdi:checkbox-marked-circle-outline", None, None],
+    CONTAINER_INFO_UPTIME: ["Up Time", "", "mdi:clock", "timestamp", None],
+    CONTAINER_INFO_IMAGE: ["Image", None, "mdi:information-outline", None, None],
+    CONTAINER_STATS_CPU_PERCENTAGE: ["CPU", "%", "mdi:chip", None, "measurement"],
+    CONTAINER_STATS_1CPU_PERCENTAGE: ["1CPU", "%", "mdi:chip", None, "measurement"],
+    CONTAINER_STATS_MEMORY: ["Memory", "MB", "mdi:memory", None, "measurement"],
+    CONTAINER_STATS_MEMORY_PERCENTAGE: ["Memory (percent)", "%", "mdi:memory", None, "measurement"],
+    CONTAINER_STATS_NETWORK_SPEED_UP: ["Network speed Up", "kB/s", "mdi:upload", None, "measurement"],
     CONTAINER_STATS_NETWORK_SPEED_DOWN: [
         "Network speed Down",
         "kB/s",
         "mdi:download",
         None,
+        "measurement"
     ],
-    CONTAINER_STATS_NETWORK_TOTAL_UP: ["Network total Up", "MB", "mdi:upload", None],
+    CONTAINER_STATS_NETWORK_TOTAL_UP: ["Network total Up", "MB", "mdi:upload", None, "total_increasing"],
     CONTAINER_STATS_NETWORK_TOTAL_DOWN: [
         "Network total Down",
         "MB",
         "mdi:download",
         None,
+        "total_increasing"
     ],
 }
 

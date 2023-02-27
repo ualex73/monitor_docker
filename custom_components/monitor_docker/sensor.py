@@ -186,6 +186,7 @@ class DockerSensor(Entity):
         self._var_unit = DOCKER_MONITOR_LIST[variable][1]
         self._var_icon = DOCKER_MONITOR_LIST[variable][2]
         self._var_class = DOCKER_MONITOR_LIST[variable][3]
+        self._var_state_class = DOCKER_MONITOR_LIST[variable][4]
 
         self._entity_id = ENTITY_ID_FORMAT.format(
             slugify(self._prefix + "_" + self._var_name)
@@ -224,6 +225,11 @@ class DockerSensor(Entity):
     def device_class(self):
         """Return the class of this sensor."""
         return self._var_class
+    
+    @property
+    def state_class(self):
+        """Return the state class of this sensor."""
+        return self._var_state_class
 
     @property
     def unit_of_measurement(self):
@@ -301,11 +307,13 @@ class DockerContainerSensor(Entity):
             self._var_unit = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][1]
             self._var_icon = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][2]
             self._var_class = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][3]
+            self._var_state_class = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][4]
         else:
             self._var_name = CONTAINER_MONITOR_LIST[variable][0]
             self._var_unit = CONTAINER_MONITOR_LIST[variable][1]
             self._var_icon = CONTAINER_MONITOR_LIST[variable][2]
             self._var_class = CONTAINER_MONITOR_LIST[variable][3]
+            self._var_state_class = CONTAINER_MONITOR_LIST[variable][4]
 
         self._state_extra = None
 
@@ -374,6 +382,11 @@ class DockerContainerSensor(Entity):
     def device_class(self):
         """Return the class of this sensor."""
         return self._var_class
+
+    @property
+    def state_class(self):
+        """Return the state class of this sensor."""
+        return self._var_state_class
 
     @property
     def unit_of_measurement(self):
