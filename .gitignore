@@ -1,0 +1,10 @@
+
+# Python generated files
+__pycache__/
+*.py[cod]
+
+# Ignore auto generated HA Files in devcontainer config:
+.devcontainer/config/.*/
+.devcontainer/config/*.db*
+.devcontainer/config/*.log*
+.devcontainer/config/.HA_VERSION
