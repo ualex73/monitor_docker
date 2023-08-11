@@ -67,7 +67,9 @@ DOCKER_SCHEMA = vol.Schema(
         vol.Optional(CONF_CONTAINERS_EXCLUDE, default=[]): cv.ensure_list,
         vol.Optional(CONF_RENAME, default={}): dict,
         vol.Optional(CONF_SENSORNAME, default=DEFAULT_SENSORNAME): cv.string,
-        vol.Optional(CONF_SWITCHENABLED, default=True): cv.boolean,
+        vol.Optional(CONF_SWITCHENABLED, default=True): vol.Any(
+            cv.boolean, cv.ensure_list(cv.string)
+        ),
         vol.Optional(CONF_SWITCHNAME, default=DEFAULT_SWITCHNAME): cv.string,
         vol.Optional(CONF_CERTPATH, default=""): cv.string,
         vol.Optional(CONF_RETRY, default=DEFAULT_RETRY): cv.positive_int,

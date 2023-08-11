@@ -36,7 +36,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     """Set up the Monitor Docker Switch."""
 
     async def async_restart(parm):
-
         cname = parm.data[ATTR_NAME]
         cserver = parm.data.get(ATTR_SERVER, None)
 
@@ -72,7 +71,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             )
 
     def find_rename(d, item):
-
         for k in d:
             if re.match(k, item):
                 return d[k]
@@ -93,7 +91,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         prefix = config[CONF_PREFIX]
 
     # Don't create any switch if disabled
-    if not config[CONF_SWITCHENABLED]:
+    if config[CONF_SWITCHENABLED] == False:
         _LOGGER.debug("[%s]: Switch(es) are disabled", instance)
         return True
 
@@ -108,7 +106,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         clist = api.list_containers()
 
     for cname in clist:
-
         includeContainer = False
         if cname in config[CONF_CONTAINERS] or not config[CONF_CONTAINERS]:
             includeContainer = True
@@ -117,18 +114,23 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             includeContainer = False
 
         if includeContainer:
-            _LOGGER.debug("[%s] %s: Adding component Switch", instance, cname)
-
-            switches.append(
-                DockerContainerSwitch(
-                    api.get_container(cname),
-                    instance,
-                    prefix,
-                    cname,
-                    find_rename(config[CONF_RENAME], cname),
-                    config[CONF_SWITCHNAME],
+            if (
+                config[CONF_SWITCHENABLED] == True
+                or cname in config[CONF_SWITCHENABLED]
+            ):
+                _LOGGER.debug("[%s] %s: Adding component Switch", instance, cname)
+                switches.append(
+                    DockerContainerSwitch(
+                        api.get_container(cname),
+                        instance,
+                        prefix,
+                        cname,
+                        find_rename(config[CONF_RENAME], cname),
+                        config[CONF_SWITCHNAME],
+                    )
                 )
-            )
+            else:
+                _LOGGER.debug("[%s] %s: NOT Adding component Switch", instance, cname)
 
     if not switches:
         _LOGGER.info("[%s]: No containers set-up", instance)

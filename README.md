@@ -106,24 +106,24 @@ monitor_docker:
 
 #### Configuration variables
 
-| Parameter                   | Type                     | Description                                                           |
-| --------------------------- | ------------------------ | --------------------------------------------------------------------- |
-| name                        | string       (Required)  | Client name of Docker daemon. Defaults to `Docker`.                   |
-| url                         | string       (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `tcp://ip:2376`. Do NOT add a slash add the end, this will invalid the URL. For TLS support see Q&A section. SSH is not supported. |
-| scan_interval               | time_period  (Optional)  | Update interval. Defaults to 10 seconds.                              |
-| certpath                    | string       (Optional)  | If TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be `cert.pem` and `key.pem`|
-| containers                  | list         (Optional)  | Array of containers to monitor. Defaults to all containers.           |
-| containers_exclude          | list         (Optional)  | Array of containers to be excluded from monitoring, when all containrs are included. |
-| monitored_conditions        | list         (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
-| rename                      | dictionary   (Optional)  | Dictionary of containers to rename. Default no renaming.              |
-| sensorname                  | string       (Optional)  | Sensor string to format the name used in Home Assistant. Defaults to `{name} {sensor}`, where `{name}` is the container name and `{sensor}` is e.g. Memory, Status, Network speed Up |
-| switchname                  | string       (Optional)  | Switch string to format the name used in Home Assistant. Defaults to `{name}`, where `{name}` is the container name. |
-| switchenabled               | boolean      (Optional)  | Enable/Disable the switch entity for all container (Default: enabled) |
-| precision_cpu               | integer      (Optional)  | Precision of CPU usage percentage (Default: 2) |
-| precision_memory_mb         | integer      (Optional)  | Precision of memory usage in MB (Default: 2) |
-| precision_memory_percentage | integer      (Optional)  | Precision of memory usage in percentage (Default: 2) |
-| precision_network_kb        | integer      (Optional)  | Precision of network bandwidth in kB (Default: 2) |
-| precision_network_mb        | integer      (Optional)  | Precision of network usage in MB (Default: 2) |
+| Parameter                   | Type                       | Description                                                           |
+| --------------------------- | -------------------------- | --------------------------------------------------------------------- |
+| name                        | string         (Required)  | Client name of Docker daemon. Defaults to `Docker`.                   |
+| url                         | string         (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `tcp://ip:2376`. Do NOT add a slash add the end, this will invalid the URL. For TLS support see Q&A section. SSH is not supported. |
+| scan_interval               | time_period    (Optional)  | Update interval. Defaults to 10 seconds.                              |
+| certpath                    | string         (Optional)  | If TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be `cert.pem` and `key.pem`|
+| containers                  | list           (Optional)  | Array of containers to monitor. Defaults to all containers.           |
+| containers_exclude          | list           (Optional)  | Array of containers to be excluded from monitoring, when all containers are included. |
+| monitored_conditions        | list           (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
+| rename                      | dictionary     (Optional)  | Dictionary of containers to rename. Default no renaming.              |
+| sensorname                  | string         (Optional)  | Sensor string to format the name used in Home Assistant. Defaults to `{name} {sensor}`, where `{name}` is the container name and `{sensor}` is e.g. Memory, Status, Network speed Up |
+| switchname                  | string         (Optional)  | Switch string to format the name used in Home Assistant. Defaults to `{name}`, where `{name}` is the container name. |
+| switchenabled               | boolean / list (Optional)  | Enable/Disable the switch entity for containers (Default: `True` Enabled switch for all containers, `False`: Disabled switch for all containers). Or specify a list of containers for which to enable switch entities. |
+| precision_cpu               | integer        (Optional)  | Precision of CPU usage percentage (Default: 2) |
+| precision_memory_mb         | integer        (Optional)  | Precision of memory usage in MB (Default: 2) |
+| precision_memory_percentage | integer        (Optional)  | Precision of memory usage in percentage (Default: 2) |
+| precision_network_kb        | integer        (Optional)  | Precision of network bandwidth in kB (Default: 2) |
+| precision_network_mb        | integer        (Optional)  | Precision of network usage in MB (Default: 2) |
 
 | Monitored Conditions              | Description                     | Unit  |
 | --------------------------------- | ------------------------------- | ----- |
