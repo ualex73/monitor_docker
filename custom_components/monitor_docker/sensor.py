@@ -1,46 +1,50 @@
 """Docker Monitor sensor component."""
-
 import asyncio
 import logging
 import re
 
-from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorEntity
-from homeassistant.const import CONF_NAME, CONF_MONITORED_CONDITIONS
+from homeassistant.components.sensor import ENTITY_ID_FORMAT
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.const import CONF_MONITORED_CONDITIONS
+from homeassistant.const import CONF_NAME
 from homeassistant.util import slugify
 
-from .const import (
-    DOMAIN,
-    API,
-    ATTR_MEMORY_LIMIT,
-    ATTR_ONLINE_CPUS,
-    ATTR_VERSION_ARCH,
-    ATTR_VERSION_KERNEL,
-    ATTR_VERSION_OS,
-    ATTR_VERSION_OS_TYPE,
-    CONFIG,
-    CONF_CONTAINERS,
-    CONF_CONTAINERS_EXCLUDE,
-    CONF_PREFIX,
-    CONF_RENAME,
-    CONF_SENSORNAME,
-    DOCKER_INFO_VERSION,
-    CONTAINER,
-    CONTAINER_INFO_ALLINONE,
-    CONTAINER_INFO_IMAGE,
-    CONTAINER_INFO_NETWORK_AVAILABLE,
-    CONTAINER_INFO_STATE,
-    CONTAINER_INFO_HEALTH,
-    CONTAINER_INFO_STATUS,
-    CONTAINER_INFO_UPTIME,
-    CONTAINER_MONITOR_LIST,
-    CONTAINER_MONITOR_NETWORK_LIST,
-    DOCKER_MONITOR_LIST,
-)
+from .const import API
+from .const import ATTR_MEMORY_LIMIT
+from .const import ATTR_ONLINE_CPUS
+from .const import ATTR_VERSION_ARCH
+from .const import ATTR_VERSION_KERNEL
+from .const import ATTR_VERSION_OS
+from .const import ATTR_VERSION_OS_TYPE
+from .const import CONF_CONTAINERS
+from .const import CONF_CONTAINERS_EXCLUDE
+from .const import CONF_PREFIX
+from .const import CONF_RENAME
+from .const import CONF_SENSORNAME
+from .const import CONFIG
+from .const import CONTAINER
+from .const import CONTAINER_INFO_ALLINONE
+from .const import CONTAINER_INFO_HEALTH
+from .const import CONTAINER_INFO_IMAGE
+from .const import CONTAINER_INFO_NETWORK_AVAILABLE
+from .const import CONTAINER_INFO_STATE
+from .const import CONTAINER_INFO_STATUS
+from .const import CONTAINER_INFO_UPTIME
+from .const import CONTAINER_MONITOR_LIST
+from .const import CONTAINER_MONITOR_NETWORK_LIST
+from .const import DOCKER_INFO_VERSION
+from .const import DOCKER_MONITOR_LIST
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+async def async_setup_platform(
+    hass,
+    config,
+    async_add_entities,
+    discovery_info=None,
+):
     """Set up the Monitor Docker Sensor."""
 
     def find_rename(d, item):
@@ -64,7 +68,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     if config[CONF_PREFIX]:
         prefix = config[CONF_PREFIX]
 
-    _LOGGER.debug("[%s]: Setting up sensor(s)", instance)
+    _LOGGER.debug('[%s]: Setting up sensor(s)', instance)
 
     sensors = []
     sensors = [
@@ -97,7 +101,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         if cname in config[CONF_CONTAINERS] or not config[CONF_CONTAINERS]:
             includeContainer = True
 
-        if config[CONF_CONTAINERS_EXCLUDE] and cname in config[CONF_CONTAINERS_EXCLUDE]:
+        if config[CONF_CONTAINERS_EXCLUDE] and cname in config[CONF_CONTAINERS_EXCLUDE]:  # noqa: E501
             includeContainer = False
 
         if includeContainer:
@@ -107,11 +111,17 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             network_available = info.get(CONTAINER_INFO_NETWORK_AVAILABLE)
             if network_available is None:
                 _LOGGER.error(
-                    "[%s] %s: Cannot determine network-available?", instance, cname
+                    '[%s] %s: Cannot determine network-available?',
+                    instance,
+                    cname,
                 )
                 network_available = False
 
-            _LOGGER.debug("[%s] %s: Adding component Sensor(s)", instance, cname)
+            _LOGGER.debug(
+                '[%s] %s: Adding component Sensor(s)',
+                instance,
+                cname,
+            )
 
             if allinone:
                 monitor_conditions = []
@@ -134,7 +144,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                         CONTAINER_INFO_ALLINONE,
                         config[CONF_SENSORNAME],
                         condition_list=monitor_conditions,
-                    )
+                    ),
                 ]
             else:
                 for variable in config[CONF_MONITORED_CONDITIONS]:
@@ -154,7 +164,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                                 find_rename(config[CONF_RENAME], cname),
                                 variable,
                                 config[CONF_SENSORNAME],
-                            )
+                            ),
                         ]
 
     # Restore state, required for destroy/create container
@@ -188,16 +198,21 @@ class DockerSensor(SensorEntity):
         self._var_state_class = DOCKER_MONITOR_LIST[variable][4]
 
         self._entity_id = ENTITY_ID_FORMAT.format(
-            slugify(self._prefix + "_" + self._var_name)
+            slugify(f'{self._prefix}_{self._var_name}'),
         )
-        self._name = "{name} {sensor}".format(name=self._prefix, sensor=self._var_name)
+        self._name = '{name} {sensor}'.format(
+            name=self._prefix,
+            sensor=self._var_name,
+        )
 
         self._state = None
         self._attributes = {}
         self._removed = False
 
         _LOGGER.info(
-            "[%s]: Initializing Docker sensor '%s'", self._instance, self._var_id
+            "[%s]: Initializing Docker sensor '%s'",
+            self._instance,
+            self._var_id,
         )
 
     @property
@@ -224,7 +239,7 @@ class DockerSensor(SensorEntity):
     def device_class(self):
         """Return the class of this sensor."""
         return self._var_class
-    
+
     @property
     def state_class(self):
         """Return the state class of this sensor."""
@@ -245,8 +260,8 @@ class DockerSensor(SensorEntity):
             self._attributes[ATTR_ONLINE_CPUS] = info.get(ATTR_ONLINE_CPUS)
             self._attributes[ATTR_VERSION_ARCH] = info.get(ATTR_VERSION_ARCH)
             self._attributes[ATTR_VERSION_OS] = info.get(ATTR_VERSION_OS)
-            self._attributes[ATTR_VERSION_OS_TYPE] = info.get(ATTR_VERSION_OS_TYPE)
-            self._attributes[ATTR_VERSION_KERNEL] = info.get(ATTR_VERSION_KERNEL)
+            self._attributes[ATTR_VERSION_OS_TYPE] = info.get(ATTR_VERSION_OS_TYPE)  # noqa: E501
+            self._attributes[ATTR_VERSION_KERNEL] = info.get(ATTR_VERSION_KERNEL)  # noqa: E501
         else:
             self._state = info.get(self._var_id)
 
@@ -268,7 +283,9 @@ class DockerSensor(SensorEntity):
 
         if remove:
             _LOGGER.info(
-                "[%s]: Removing sensor entity: %s", self._instance, self._var_id
+                '[%s]: Removing sensor entity: %s',
+                self._instance,
+                self._var_id,
             )
             self._loop.create_task(self.async_remove())
             self._removed = True
@@ -306,7 +323,7 @@ class DockerContainerSensor(SensorEntity):
             self._var_unit = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][1]
             self._var_icon = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][2]
             self._var_class = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][3]
-            self._var_state_class = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][4]
+            self._var_state_class = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][4]  # noqa: E501
         else:
             self._var_name = CONTAINER_MONITOR_LIST[variable][0]
             self._var_unit = CONTAINER_MONITOR_LIST[variable][1]
@@ -318,15 +335,19 @@ class DockerContainerSensor(SensorEntity):
 
         if self._var_id == CONTAINER_INFO_ALLINONE:
             self._entity_id = ENTITY_ID_FORMAT.format(
-                slugify(self._prefix + "_" + self._cname)
-            )
-            self._name = sensor_name_format.format(name=alias, sensorname="", sensor="")
-        else:
-            self._entity_id = ENTITY_ID_FORMAT.format(
-                slugify(self._prefix + "_" + self._cname + "_" + self._var_name)
+                slugify(f'{self._prefix}_{self._cname}'),
             )
             self._name = sensor_name_format.format(
-                name=alias, sensorname=self._var_name, sensor=self._var_name
+                name=alias,
+                sensorname='',
+                sensor='',
+            )
+        else:
+            self._entity_id = ENTITY_ID_FORMAT.format(
+                slugify(f'{self._prefix} {self._cname} {self._var_name}'),
+            )
+            self._name = sensor_name_format.format(
+                name=alias, sensorname=self._var_name, sensor=self._var_name,
             )
 
         self._state = None
@@ -336,7 +357,7 @@ class DockerContainerSensor(SensorEntity):
         self._removed = False
 
         _LOGGER.info(
-            "[%s] %s: Initializing sensor with parameter: %s",
+            '[%s] %s: Initializing sensor with parameter: %s',
             self._instance,
             self._cname,
             self._var_name,
@@ -356,15 +377,15 @@ class DockerContainerSensor(SensorEntity):
     def icon(self):
         """Icon to use in the frontend, if any."""
         if self._var_id == CONTAINER_INFO_STATUS:
-            if self._state_extra == "running":
-                return "mdi:checkbox-marked-circle-outline"
+            if self._state_extra == 'running':
+                return 'mdi:checkbox-marked-circle-outline'
             else:
-                return "mdi:checkbox-blank-circle-outline"
+                return 'mdi:checkbox-blank-circle-outline'
         elif self._var_id in [CONTAINER_INFO_ALLINONE, CONTAINER_INFO_STATE]:
-            if self._state == "running":
-                return "mdi:checkbox-marked-circle-outline"
+            if self._state == 'running':
+                return 'mdi:checkbox-marked-circle-outline'
             else:
-                return "mdi:checkbox-blank-circle-outline"
+                return 'mdi:checkbox-blank-circle-outline'
 
         return self._var_icon
 
@@ -404,7 +425,7 @@ class DockerContainerSensor(SensorEntity):
         # Call event callback for possible information available
         self.event_callback()
 
-    def event_callback(self, name="", remove=False):
+    def event_callback(self, name='', remove=False):
         """Callback for update of container information."""
 
         if remove:
@@ -413,7 +434,7 @@ class DockerContainerSensor(SensorEntity):
                 return
 
             _LOGGER.info(
-                "[%s] %s: Removing sensor entity: %s",
+                '[%s] %s: Removing sensor entity: %s',
                 self._instance,
                 self._cname,
                 self._var_id,
@@ -425,7 +446,7 @@ class DockerContainerSensor(SensorEntity):
         state = None
 
         _LOGGER.debug(
-            "[%s] %s: Received callback for: %s",
+            '[%s] %s: Received callback for: %s',
             self._instance,
             self._cname,
             self._var_name,
@@ -436,12 +457,12 @@ class DockerContainerSensor(SensorEntity):
         try:
             info = self._container.get_info()
 
-            if info.get(CONTAINER_INFO_STATE) == "running":
+            if info.get(CONTAINER_INFO_STATE) == 'running':
                 stats = self._container.get_stats()
 
         except Exception as err:
             _LOGGER.error(
-                "[%s] %s: Cannot request container info (%s)",
+                '[%s] %s: Cannot request container info (%s)',
                 self._instance,
                 self._cname,
                 str(err),
@@ -472,7 +493,7 @@ class DockerContainerSensor(SensorEntity):
                 CONTAINER_INFO_HEALTH,
             ]:
                 state = info.get(self._var_id)
-            elif info.get(CONTAINER_INFO_STATE) == "running":
+            elif info.get(CONTAINER_INFO_STATE) == 'running':
                 if self._var_id in CONTAINER_MONITOR_LIST:
                     if self._var_id in [CONTAINER_INFO_UPTIME]:
                         state = info.get(self._var_id)
