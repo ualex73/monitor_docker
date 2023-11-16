@@ -29,7 +29,7 @@ DEFAULT_SENSORNAME = "{name} {sensor}"
 DEFAULT_SWITCHNAME = "{name}"
 DEFAULT_BUTTONNAME = "{name} Restart"
 
-COMPONENTS = ["sensor", "switch"]
+COMPONENTS = ["sensor", "switch", "button"]
 
 SERVICE_RESTART = "restart"
 
