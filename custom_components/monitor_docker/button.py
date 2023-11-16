@@ -185,7 +185,7 @@ class DockerContainerButton(ButtonEntity):
     def is_on(self):
         return self._state
                                  
-    async def async_reboot(self):
+    async def async_press(self):
         await self._container.stop()
         self._state = False
         self.async_schedule_update_ha_state()

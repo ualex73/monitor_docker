@@ -357,7 +357,7 @@ class DockerAPI:
                             self._loop.create_task(self._container_create_destroy())
                     elif event["Action"] == "rename":
                         # during a docker-compose up -d <container> the old container can be renamed
-                        # sensors/switch/buttons should be removed before the new container is monitored
+                        # sensors/switch/button should be removed before the new container is monitored
 
                         # New name
                         cname = event["Actor"]["Attributes"]["name"]
