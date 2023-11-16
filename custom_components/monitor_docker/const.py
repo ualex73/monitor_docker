@@ -20,11 +20,14 @@ CONF_RETRY = "retry"
 CONF_SENSORNAME = "sensorname"
 CONF_SWITCHENABLED = "switchenabled"
 CONF_SWITCHNAME = "switchname"
+CONF_BUTTONENABLED = "buttonenabled"
+CONF_BUTTONNAME = "buttonname"
 
 DEFAULT_NAME = "Docker"
 DEFAULT_RETRY = 60
 DEFAULT_SENSORNAME = "{name} {sensor}"
 DEFAULT_SWITCHNAME = "{name}"
+DEFAULT_BUTTONNAME = "{name} Restart"
 
 COMPONENTS = ["sensor", "switch"]
 
