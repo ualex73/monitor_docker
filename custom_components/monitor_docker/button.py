@@ -146,6 +146,17 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
 #################################################################
 class DockerContainerButton(ButtonEntity):
+    @property
+    def device_info(self):
+        """Return device information for the Docker container."""
+        return {
+            'identifiers': {('docker_monitor', self.container_name)}, # Linking to the device using container name
+            'name': f'Docker Container - {self.container_name}',
+            'manufacturer': 'Docker',
+            'model': 'Docker Container',
+            'sw_version': 'Docker container version',
+        }
+
     def __init__(self, container, instance, prefix, cname, alias, name_format):
         self._loop = asyncio.get_running_loop()
         self._container = container
