@@ -160,6 +160,21 @@ class DockerContainerButton(ButtonEntity):
         self._removed = False
 
     @property
+    def device_info(self) -> CONTAINER:
+        """Return the device info."""
+        return CONTAINER(
+            identifiers={
+                # Serial numbers are unique identifiers within a specific domain
+                (CONTAINER, self.unique_id)
+            },
+            name=self.name,
+#            manufacturer=self.light.manufacturername,
+#            model=self.light.productname,
+#            sw_version=self.light.swversion,
+#            via_device=(hue.DOMAIN, self.api.bridgeid),
+        )
+
+    @property
     def entity_id(self):
         """Return the entity id of the button."""
         return self._entity_id
