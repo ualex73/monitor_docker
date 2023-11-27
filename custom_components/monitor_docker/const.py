@@ -1,4 +1,4 @@
-"""Define constants for the Monitor Docker component..."""
+"""Define constants for the Monitor Docker component."""
 
 DOMAIN = "monitor_docker"
 API = "api"
