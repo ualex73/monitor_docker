@@ -95,10 +95,6 @@ CONFIG_SCHEMA = vol.Schema(
     {DOMAIN: vol.All(cv.ensure_list, [vol.Any(DOCKER_SCHEMA)])}, extra=vol.ALLOW_EXTRA
 )
 
-#async def async_remove_config_entry_device(
-#    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
-#) -> bool:
-#    """Remove a config entry from a device."""
 
 #################################################################
 async def async_setup(hass, config):
