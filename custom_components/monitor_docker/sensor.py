@@ -201,6 +201,16 @@ class DockerSensor(SensorEntity):
         )
 
     @property
+    def device_info(self):
+        """Return information about the device this entity belongs to."""
+        return {
+            "identifiers": {(DOMAIN, self._cname)},
+            "name": f"Container {self._cname}",
+            "manufacturer": "Docker",
+            "model": "Container"
+        }
+
+    @property
     def entity_id(self):
         """Return the entity id of the sensor."""
         return self._entity_id
@@ -256,6 +266,18 @@ class DockerSensor(SensorEntity):
         return self._attributes
 
     async def async_added_to_hass(self):
+        """When entity is added to hass."""
+        await super().async_added_to_hass()
+        # Get or create device associated with the container
+        device_registry = self.hass.helpers.device_registry.async_get(self.hass)
+        device_registry.async_get_or_create(
+            config_entry_id=self.container_name, # Unique ID for the device
+            identifiers={(DOMAIN, self.container_name)},
+            name=f'Docker Container - {self.container_name}',
+            manufacturer='Docker',
+            model='Docker Container',
+            sw_version='Docker container version'
+        )
         """Register callbacks."""
         self._api.register_callback(self.event_callback, self._var_id)
 
@@ -398,6 +420,19 @@ class DockerContainerSensor(SensorEntity):
         return self._attributes
 
     async def async_added_to_hass(self):
+        """When entity is added to hass."""
+        await super().async_added_to_hass()
+        # Get or create device associated with the container
+        device_registry = self.hass.helpers.device_registry.async_get(self.hass)
+        device_registry.async_get_or_create(
+            config_entry_id=self.container_name, # Unique ID for the device
+            identifiers={(DOMAIN, self.container_name)},
+            name=f'Docker Container - {self.container_name}',
+            manufacturer='Docker',
+            model='Docker Container',
+            sw_version='Docker container version'
+        )
+
         """Register callbacks."""
         self._container.register_callback(self.event_callback, self._var_id)
 
