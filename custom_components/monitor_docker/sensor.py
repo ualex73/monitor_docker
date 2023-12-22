@@ -5,11 +5,10 @@ import logging
 import re
 
 from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorEntity
-from homeassistant.const import CONF_NAME, CONF_MONITORED_CONDITIONS
+from homeassistant.const import CONF_MONITORED_CONDITIONS, CONF_NAME
 from homeassistant.util import slugify
 
 from .const import (
-    DOMAIN,
     API,
     ATTR_MEMORY_LIMIT,
     ATTR_ONLINE_CPUS,
@@ -17,24 +16,25 @@ from .const import (
     ATTR_VERSION_KERNEL,
     ATTR_VERSION_OS,
     ATTR_VERSION_OS_TYPE,
-    CONFIG,
     CONF_CONTAINERS,
     CONF_CONTAINERS_EXCLUDE,
     CONF_PREFIX,
     CONF_RENAME,
     CONF_SENSORNAME,
-    DOCKER_INFO_VERSION,
+    CONFIG,
     CONTAINER,
     CONTAINER_INFO_ALLINONE,
+    CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_IMAGE,
     CONTAINER_INFO_NETWORK_AVAILABLE,
     CONTAINER_INFO_STATE,
-    CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_STATUS,
     CONTAINER_INFO_UPTIME,
     CONTAINER_MONITOR_LIST,
     CONTAINER_MONITOR_NETWORK_LIST,
+    DOCKER_INFO_VERSION,
     DOCKER_MONITOR_LIST,
+    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -44,7 +44,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     """Set up the Monitor Docker Sensor."""
 
     def find_rename(d, item):
-
         for k in d:
             if re.match(k, item):
                 return d[k]
@@ -92,7 +91,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             config[CONF_MONITORED_CONDITIONS].remove(CONTAINER_INFO_STATE)
 
     for cname in clist:
-
         includeContainer = False
         if cname in config[CONF_CONTAINERS] or not config[CONF_CONTAINERS]:
             includeContainer = True
@@ -224,7 +222,7 @@ class DockerSensor(SensorEntity):
     def device_class(self):
         """Return the class of this sensor."""
         return self._var_class
-    
+
     @property
     def state_class(self):
         """Return the state class of this sensor."""

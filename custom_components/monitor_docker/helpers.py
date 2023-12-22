@@ -1,25 +1,22 @@
 """Monitor Docker API helper."""
 
-import aiodocker
 import asyncio
 import concurrent
 import logging
 import os
 import time
-
 from datetime import datetime, timezone
-from dateutil import parser, relativedelta
 
-from homeassistant.helpers.discovery import load_platform
-
+import aiodocker
 import homeassistant.util.dt as dt_util
-
+from dateutil import parser, relativedelta
 from homeassistant.const import (
     CONF_NAME,
     CONF_SCAN_INTERVAL,
     CONF_URL,
     EVENT_HOMEASSISTANT_STOP,
 )
+from homeassistant.helpers.discovery import load_platform
 
 from .const import (
     ATTR_MEMORY_LIMIT,
@@ -37,28 +34,28 @@ from .const import (
     CONF_PRECISION_NETWORK_KB,
     CONF_PRECISION_NETWORK_MB,
     CONTAINER,
-    CONTAINER_STATS_CPU_PERCENTAGE,
-    CONTAINER_STATS_1CPU_PERCENTAGE,
+    CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_IMAGE,
     CONTAINER_INFO_NETWORK_AVAILABLE,
-    CONTAINER_STATS_MEMORY,
-    CONTAINER_STATS_MEMORY_PERCENTAGE,
-    CONTAINER_STATS_NETWORK_SPEED_UP,
-    CONTAINER_STATS_NETWORK_SPEED_DOWN,
-    CONTAINER_STATS_NETWORK_TOTAL_UP,
-    CONTAINER_STATS_NETWORK_TOTAL_DOWN,
-    DOCKER_INFO_IMAGES,
     CONTAINER_INFO_STATE,
-    CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_STATUS,
     CONTAINER_INFO_UPTIME,
-    DOCKER_INFO_CONTAINER_RUNNING,
+    CONTAINER_STATS_1CPU_PERCENTAGE,
+    CONTAINER_STATS_CPU_PERCENTAGE,
+    CONTAINER_STATS_MEMORY,
+    CONTAINER_STATS_MEMORY_PERCENTAGE,
+    CONTAINER_STATS_NETWORK_SPEED_DOWN,
+    CONTAINER_STATS_NETWORK_SPEED_UP,
+    CONTAINER_STATS_NETWORK_TOTAL_DOWN,
+    CONTAINER_STATS_NETWORK_TOTAL_UP,
     DOCKER_INFO_CONTAINER_PAUSED,
+    DOCKER_INFO_CONTAINER_RUNNING,
     DOCKER_INFO_CONTAINER_STOPPED,
     DOCKER_INFO_CONTAINER_TOTAL,
+    DOCKER_INFO_IMAGES,
     DOCKER_INFO_VERSION,
-    DOCKER_STATS_CPU_PERCENTAGE,
     DOCKER_STATS_1CPU_PERCENTAGE,
+    DOCKER_STATS_CPU_PERCENTAGE,
     DOCKER_STATS_MEMORY,
     DOCKER_STATS_MEMORY_PERCENTAGE,
     DOMAIN,
@@ -72,12 +69,12 @@ _LOGGER = logging.getLogger(__name__)
 
 def toKB(value, precision=PRECISION):
     """Converts bytes to kBytes."""
-    return round(value / (1024 ** 1), precision)
+    return round(value / (1024**1), precision)
 
 
 def toMB(value, precision=PRECISION):
     """Converts bytes to MBytes."""
-    return round(value / (1024 ** 2), precision)
+    return round(value / (1024**2), precision)
 
 
 #################################################################
@@ -266,7 +263,6 @@ class DockerAPI:
             subscriber = self._api.events.subscribe()
 
             while True:
-
                 event = await subscriber.get()
 
                 # When we receive none, the connection normally is broken
@@ -400,7 +396,6 @@ class DockerAPI:
 
         try:
             while self._event_create or self._event_destroy:
-
                 # Go through create loop first
                 for cname in self._event_create:
                     if self._event_create[cname] > 2:
@@ -429,7 +424,6 @@ class DockerAPI:
 
     #############################################################
     async def _container_add(self, cname):
-
         if cname in self._containers:
             _LOGGER.error("[%s] %s: Container already monitored", self._instance, cname)
             return
@@ -463,7 +457,6 @@ class DockerAPI:
 
     #############################################################
     async def _container_remove(self, cname):
-
         if cname in self._containers:
             _LOGGER.debug("[%s] %s: Stopping Container Monitor", self._instance, cname)
             self._containers[cname].cancel_task()
@@ -481,7 +474,6 @@ class DockerAPI:
 
         try:
             while True:
-
                 if self._dockerStopped:
                     _LOGGER.debug("[%s]: Stopping docker info thread", self._instance)
                     break
@@ -718,7 +710,6 @@ class DockerContainerAPI:
 
     #############################################################
     async def _initGetContainer(self):
-
         # If we noticed a event=create, we need to attach here.
         # The run_until_complete doesn't work, because we are already
         # in a running loop.
@@ -745,7 +736,6 @@ class DockerContainerAPI:
 
         while True:
             try:
-
                 # Don't check container if we are doing a start/stop
                 if not self._busy:
                     await self._run_container_info()
@@ -852,7 +842,6 @@ class DockerContainerAPI:
 
     #############################################################
     async def _run_container_stats(self):
-
         # Initialize stats information
         stats = {}
         stats["cpu"] = {}
@@ -908,7 +897,6 @@ class DockerContainerAPI:
             self._cpu_error = 0
 
         except KeyError as err:
-
             # Something wrong with the raw data
             if self._cpu_error == 0:
                 _LOGGER.error(
@@ -976,7 +964,6 @@ class DockerContainerAPI:
             self._memory_error = 0
 
         except (KeyError, TypeError) as err:
-
             if self._memory_error == 0:
                 _LOGGER.error(
                     "[%s] %s: Cannot determine memory usage for container (%s)",

@@ -2,16 +2,12 @@
 
 import asyncio
 import logging
-import time
 import threading
-import voluptuous as vol
-
+import time
 from datetime import timedelta
 
 import homeassistant.helpers.config_validation as cv
-
-from .helpers import DockerAPI
-
+import voluptuous as vol
 from homeassistant.const import (
     CONF_MONITORED_CONDITIONS,
     CONF_NAME,
@@ -38,14 +34,15 @@ from .const import (
     CONF_SWITCHNAME,
     CONFIG,
     CONTAINER_INFO_ALLINONE,
-    DOMAIN,
     DEFAULT_NAME,
     DEFAULT_RETRY,
     DEFAULT_SENSORNAME,
     DEFAULT_SWITCHNAME,
+    DOMAIN,
     MONITORED_CONDITIONS_LIST,
     PRECISION,
 )
+from .helpers import DockerAPI
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -3,11 +3,12 @@
 import asyncio
 import logging
 import re
-import voluptuous as vol
 
+import voluptuous as vol
 from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
 from homeassistant.const import CONF_NAME
-from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_platform
 from homeassistant.util import slugify
 
 from .const import (
