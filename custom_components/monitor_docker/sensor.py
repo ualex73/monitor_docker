@@ -3,9 +3,13 @@
 import asyncio
 import logging
 import re
+from typing import Any
 
 from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorEntity
 from homeassistant.const import CONF_MONITORED_CONDITIONS, CONF_NAME
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import slugify
 
 from .const import (
@@ -36,14 +40,20 @@ from .const import (
     DOCKER_MONITOR_LIST,
     DOMAIN,
 )
+from .helpers import DockerAPI, DockerContainerAPI
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+async def async_setup_platform(
+    hass: HomeAssistant,
+    config: ConfigType,
+    async_add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
+):
     """Set up the Monitor Docker Sensor."""
 
-    def find_rename(d, item):
+    def find_rename(d: dict[str, str], item: str) -> str:
         for k in d:
             if re.match(k, item):
                 return d[k]
@@ -53,10 +63,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     if discovery_info is None:
         return
 
-    instance = discovery_info[CONF_NAME]
-    name = discovery_info[CONF_NAME]
-    api = hass.data[DOMAIN][name][API]
-    config = hass.data[DOMAIN][name][CONFIG]
+    instance: str = discovery_info[CONF_NAME]
+    name: str = discovery_info[CONF_NAME]
+    api: DockerAPI = hass.data[DOMAIN][name][API]
+    config: ConfigType = hass.data[DOMAIN][name][CONFIG]
 
     # Set or overrule prefix
     prefix = name
@@ -66,7 +76,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     _LOGGER.debug("[%s]: Setting up sensor(s)", instance)
 
     sensors = []
-    sensors = [
+    sensors: list[DockerSensor | DockerContainerSensor] = [
         DockerSensor(api, instance, prefix, variable)
         for variable in config[CONF_MONITORED_CONDITIONS]
         if variable in DOCKER_MONITOR_LIST
@@ -170,7 +180,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 class DockerSensor(SensorEntity):
     """Representation of a Docker Sensor."""
 
-    def __init__(self, api, instance, prefix, variable):
+    def __init__(self, api: DockerAPI, instance: str, prefix: str, variable: str):
         """Initialize the sensor."""
 
         self._loop = asyncio.get_running_loop()
@@ -179,19 +189,19 @@ class DockerSensor(SensorEntity):
         self._prefix = prefix
 
         self._var_id = variable
-        self._var_name = DOCKER_MONITOR_LIST[variable][0]
-        self._var_unit = DOCKER_MONITOR_LIST[variable][1]
-        self._var_icon = DOCKER_MONITOR_LIST[variable][2]
-        self._var_class = DOCKER_MONITOR_LIST[variable][3]
-        self._var_state_class = DOCKER_MONITOR_LIST[variable][4]
+        self._var_name: str = DOCKER_MONITOR_LIST[variable][0]
+        self._var_unit: str | None = DOCKER_MONITOR_LIST[variable][1]
+        self._var_icon: str = DOCKER_MONITOR_LIST[variable][2]
+        self._var_class: str | None = DOCKER_MONITOR_LIST[variable][3]
+        self._var_state_class: str | None = DOCKER_MONITOR_LIST[variable][4]
 
-        self._entity_id = ENTITY_ID_FORMAT.format(
+        self._entity_id: str = ENTITY_ID_FORMAT.format(
             slugify(self._prefix + "_" + self._var_name)
         )
         self._name = "{name} {sensor}".format(name=self._prefix, sensor=self._var_name)
 
         self._state = None
-        self._attributes = {}
+        self._attributes: dict[str, Any] = {}
         self._removed = False
 
         _LOGGER.info(
@@ -199,37 +209,37 @@ class DockerSensor(SensorEntity):
         )
 
     @property
-    def entity_id(self):
+    def entity_id(self) -> str:
         """Return the entity id of the sensor."""
         return self._entity_id
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Return the name of the sensor."""
         return self._name
 
     @property
-    def icon(self):
+    def icon(self) -> str:
         """Icon to use in the frontend."""
         return self._var_icon
 
     @property
-    def state(self):
+    def state(self) -> str:
         """Return the state of the sensor."""
         return self._state
 
     @property
-    def device_class(self):
+    def device_class(self) -> str | None:
         """Return the class of this sensor."""
         return self._var_class
 
     @property
-    def state_class(self):
+    def state_class(self) -> str | None:
         """Return the state class of this sensor."""
         return self._var_state_class
 
     @property
-    def unit_of_measurement(self):
+    def unit_of_measurement(self) -> str | None:
         """Return the unit the value is expressed in."""
         return self._var_unit
 
@@ -249,7 +259,7 @@ class DockerSensor(SensorEntity):
             self._state = info.get(self._var_id)
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict:
         """Return the state attributes."""
         return self._attributes
 
@@ -279,14 +289,14 @@ class DockerContainerSensor(SensorEntity):
 
     def __init__(
         self,
-        container,
-        instance,
-        prefix,
-        cname,
-        alias,
-        variable,
-        sensor_name_format,
-        condition_list=None,
+        container: DockerContainerAPI,
+        instance: str,
+        prefix: str,
+        cname: str,
+        alias: str,
+        variable: str,
+        sensor_name_format: str,
+        condition_list: list | None = None,
     ):
         """Initialize the sensor."""
 
@@ -300,17 +310,21 @@ class DockerContainerSensor(SensorEntity):
         self._var_id = variable
 
         if self._var_id == CONTAINER_INFO_ALLINONE:
-            self._var_name = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][0]
-            self._var_unit = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][1]
-            self._var_icon = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][2]
-            self._var_class = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][3]
-            self._var_state_class = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][4]
+            self._var_name: str = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][0]
+            self._var_unit: str | None = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][1]
+            self._var_icon: str = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][2]
+            self._var_class: str | None = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][
+                3
+            ]
+            self._var_state_class: str | None = CONTAINER_MONITOR_LIST[
+                CONTAINER_INFO_STATE
+            ][4]
         else:
-            self._var_name = CONTAINER_MONITOR_LIST[variable][0]
-            self._var_unit = CONTAINER_MONITOR_LIST[variable][1]
-            self._var_icon = CONTAINER_MONITOR_LIST[variable][2]
-            self._var_class = CONTAINER_MONITOR_LIST[variable][3]
-            self._var_state_class = CONTAINER_MONITOR_LIST[variable][4]
+            self._var_name: str = CONTAINER_MONITOR_LIST[variable][0]
+            self._var_unit: str | None = CONTAINER_MONITOR_LIST[variable][1]
+            self._var_icon: str = CONTAINER_MONITOR_LIST[variable][2]
+            self._var_class: str | None = CONTAINER_MONITOR_LIST[variable][3]
+            self._var_state_class: str | None = CONTAINER_MONITOR_LIST[variable][4]
 
         self._state_extra = None
 
@@ -330,7 +344,7 @@ class DockerContainerSensor(SensorEntity):
         self._state = None
         self._state_extra = None
 
-        self._attributes = {}
+        self._attributes: dict[str, Any] = {}
         self._removed = False
 
         _LOGGER.info(
@@ -341,17 +355,17 @@ class DockerContainerSensor(SensorEntity):
         )
 
     @property
-    def entity_id(self):
+    def entity_id(self) -> str:
         """Return the entity id of the sensor."""
         return self._entity_id
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Return the name of the sensor, if any."""
         return self._name
 
     @property
-    def icon(self):
+    def icon(self) -> str:
         """Icon to use in the frontend, if any."""
         if self._var_id == CONTAINER_INFO_STATUS:
             if self._state_extra == "running":
@@ -367,42 +381,42 @@ class DockerContainerSensor(SensorEntity):
         return self._var_icon
 
     @property
-    def should_poll(self):
+    def should_poll(self) -> bool:
         return False
 
     @property
-    def state(self):
+    def state(self) -> str:
         """Return the state of the sensor."""
         return self._state
 
     @property
-    def device_class(self):
+    def device_class(self) -> str | None:
         """Return the class of this sensor."""
         return self._var_class
 
     @property
-    def state_class(self):
+    def state_class(self) -> str | None:
         """Return the state class of this sensor."""
         return self._var_state_class
 
     @property
-    def unit_of_measurement(self):
+    def unit_of_measurement(self) -> str | None:
         """Return the unit the value is expressed in."""
         return self._var_unit
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return the state attributes."""
         return self._attributes
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Register callbacks."""
         self._container.register_callback(self.event_callback, self._var_id)
 
         # Call event callback for possible information available
         self.event_callback()
 
-    def event_callback(self, name="", remove=False):
+    def event_callback(self, name="", remove=False) -> None:
         """Callback for update of container information."""
 
         if remove:

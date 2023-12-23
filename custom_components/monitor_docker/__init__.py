@@ -14,6 +14,8 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_URL,
 )
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     API,
@@ -87,10 +89,10 @@ CONFIG_SCHEMA = vol.Schema(
 
 
 #################################################################
-async def async_setup(hass, config):
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Will setup the Monitor Docker platform."""
 
-    def RunDocker(hass, entry):
+    def RunDocker(hass: HomeAssistant, entry: ConfigType) -> None:
         """Wrapper around function for a separated thread."""
 
         # Create out asyncio loop, because we are already inside
