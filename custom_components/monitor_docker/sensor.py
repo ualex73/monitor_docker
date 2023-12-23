@@ -224,7 +224,7 @@ class DockerSensor(SensorEntity):
         return self._var_icon
 
     @property
-    def state(self) -> str:
+    def native_value(self) -> str:
         """Return the state of the sensor."""
         return self._state
 
@@ -239,7 +239,7 @@ class DockerSensor(SensorEntity):
         return self._var_state_class
 
     @property
-    def unit_of_measurement(self) -> str | None:
+    def native_unit_of_measurement(self) -> str | None:
         """Return the unit the value is expressed in."""
         return self._var_unit
 
@@ -385,7 +385,7 @@ class DockerContainerSensor(SensorEntity):
         return False
 
     @property
-    def state(self) -> str:
+    def native_value(self) -> str:
         """Return the state of the sensor."""
         return self._state
 
@@ -400,7 +400,7 @@ class DockerContainerSensor(SensorEntity):
         return self._var_state_class
 
     @property
-    def unit_of_measurement(self) -> str | None:
+    def native_unit_of_measurement(self) -> str | None:
         """Return the unit the value is expressed in."""
         return self._var_unit
 
