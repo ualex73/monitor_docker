@@ -3,9 +3,14 @@
 import asyncio
 import logging
 import re
+from datetime import datetime
 from typing import Any
 
-from homeassistant.components.sensor import ENTITY_ID_FORMAT, SensorEntity
+from homeassistant.components.sensor import (
+    ENTITY_ID_FORMAT,
+    SensorEntity,
+    SensorEntityDescription,
+)
 from homeassistant.const import CONF_MONITORED_CONDITIONS, CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -77,7 +82,7 @@ async def async_setup_platform(
 
     sensors = []
     sensors: list[DockerSensor | DockerContainerSensor] = [
-        DockerSensor(api, instance, prefix, variable)
+        DockerSensor(api, instance, prefix, DOCKER_MONITOR_LIST[variable])
         for variable in config[CONF_MONITORED_CONDITIONS]
         if variable in DOCKER_MONITOR_LIST
         if CONTAINER not in discovery_info
@@ -139,7 +144,7 @@ async def async_setup_platform(
                         prefix,
                         cname,
                         find_rename(config[CONF_RENAME], cname),
-                        CONTAINER_INFO_ALLINONE,
+                        CONTAINER_MONITOR_LIST[CONTAINER_INFO_ALLINONE],
                         config[CONF_SENSORNAME],
                         condition_list=monitor_conditions,
                     )
@@ -160,7 +165,7 @@ async def async_setup_platform(
                                 prefix,
                                 cname,
                                 find_rename(config[CONF_RENAME], cname),
-                                variable,
+                                CONTAINER_MONITOR_LIST[variable],
                                 config[CONF_SENSORNAME],
                             )
                         ]
@@ -180,7 +185,13 @@ async def async_setup_platform(
 class DockerSensor(SensorEntity):
     """Representation of a Docker Sensor."""
 
-    def __init__(self, api: DockerAPI, instance: str, prefix: str, variable: str):
+    def __init__(
+        self,
+        api: DockerAPI,
+        instance: str,
+        prefix: str,
+        description: SensorEntityDescription,
+    ):
         """Initialize the sensor."""
 
         self._loop = asyncio.get_running_loop()
@@ -188,24 +199,23 @@ class DockerSensor(SensorEntity):
         self._instance = instance
         self._prefix = prefix
 
-        self._var_id = variable
-        self._var_name: str = DOCKER_MONITOR_LIST[variable][0]
-        self._var_unit: str | None = DOCKER_MONITOR_LIST[variable][1]
-        self._var_icon: str = DOCKER_MONITOR_LIST[variable][2]
-        self._var_class: str | None = DOCKER_MONITOR_LIST[variable][3]
-        self._var_state_class: str | None = DOCKER_MONITOR_LIST[variable][4]
+        self.entity_description = description
 
         self._entity_id: str = ENTITY_ID_FORMAT.format(
-            slugify(self._prefix + "_" + self._var_name)
+            slugify(self._prefix + "_" + self.entity_description.name)
         )
-        self._name = "{name} {sensor}".format(name=self._prefix, sensor=self._var_name)
+        self._name = "{name} {sensor}".format(
+            name=self._prefix, sensor=self.entity_description
+        )
 
         self._state = None
         self._attributes: dict[str, Any] = {}
         self._removed = False
 
         _LOGGER.info(
-            "[%s]: Initializing Docker sensor '%s'", self._instance, self._var_id
+            "[%s]: Initializing Docker sensor '%s'",
+            self._instance,
+            self.entity_description.name,
         )
 
     @property
@@ -214,41 +224,16 @@ class DockerSensor(SensorEntity):
         return self._entity_id
 
     @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return self._name
-
-    @property
-    def icon(self) -> str:
-        """Icon to use in the frontend."""
-        return self._var_icon
-
-    @property
     def native_value(self) -> str:
         """Return the state of the sensor."""
         return self._state
-
-    @property
-    def device_class(self) -> str | None:
-        """Return the class of this sensor."""
-        return self._var_class
-
-    @property
-    def state_class(self) -> str | None:
-        """Return the state class of this sensor."""
-        return self._var_state_class
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        """Return the unit the value is expressed in."""
-        return self._var_unit
 
     def update(self):
         """Get the latest data for the states."""
         info = self._api.get_info()
 
-        if self._var_id == DOCKER_INFO_VERSION:
-            self._state = info.get(self._var_id)
+        if self.entity_description.key == DOCKER_INFO_VERSION:
+            self._state = info.get(self.entity_description.key)
             self._attributes[ATTR_MEMORY_LIMIT] = info.get(ATTR_MEMORY_LIMIT)
             self._attributes[ATTR_ONLINE_CPUS] = info.get(ATTR_ONLINE_CPUS)
             self._attributes[ATTR_VERSION_ARCH] = info.get(ATTR_VERSION_ARCH)
@@ -256,7 +241,7 @@ class DockerSensor(SensorEntity):
             self._attributes[ATTR_VERSION_OS_TYPE] = info.get(ATTR_VERSION_OS_TYPE)
             self._attributes[ATTR_VERSION_KERNEL] = info.get(ATTR_VERSION_KERNEL)
         else:
-            self._state = info.get(self._var_id)
+            self._state = info.get(self.entity_description.key)
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -265,7 +250,7 @@ class DockerSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
-        self._api.register_callback(self.event_callback, self._var_id)
+        self._api.register_callback(self.event_callback, self.entity_description.key)
 
     def event_callback(self, remove=False):
         """Callback to remove Docker entity."""
@@ -276,7 +261,9 @@ class DockerSensor(SensorEntity):
 
         if remove:
             _LOGGER.info(
-                "[%s]: Removing sensor entity: %s", self._instance, self._var_id
+                "[%s]: Removing sensor entity: %s",
+                self._instance,
+                self.entity_description.key,
             )
             self._loop.create_task(self.async_remove())
             self._removed = True
@@ -294,7 +281,7 @@ class DockerContainerSensor(SensorEntity):
         prefix: str,
         cname: str,
         alias: str,
-        variable: str,
+        description: SensorEntityDescription,
         sensor_name_format: str,
         condition_list: list | None = None,
     ):
@@ -307,51 +294,47 @@ class DockerContainerSensor(SensorEntity):
         self._cname = cname
         self._condition_list = condition_list
 
-        self._var_id = variable
+        self.entity_description = description
 
-        if self._var_id == CONTAINER_INFO_ALLINONE:
-            self._var_name: str = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][0]
-            self._var_unit: str | None = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][1]
-            self._var_icon: str = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][2]
-            self._var_class: str | None = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE][
-                3
-            ]
-            self._var_state_class: str | None = CONTAINER_MONITOR_LIST[
-                CONTAINER_INFO_STATE
-            ][4]
-        else:
-            self._var_name: str = CONTAINER_MONITOR_LIST[variable][0]
-            self._var_unit: str | None = CONTAINER_MONITOR_LIST[variable][1]
-            self._var_icon: str = CONTAINER_MONITOR_LIST[variable][2]
-            self._var_class: str | None = CONTAINER_MONITOR_LIST[variable][3]
-            self._var_state_class: str | None = CONTAINER_MONITOR_LIST[variable][4]
+        if self.entity_description.key == CONTAINER_INFO_ALLINONE:
+            self.entity_description = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE]
 
         self._state_extra = None
 
-        if self._var_id == CONTAINER_INFO_ALLINONE:
-            self._entity_id = ENTITY_ID_FORMAT.format(
+        if self.entity_description.key == CONTAINER_INFO_ALLINONE:
+            self._attr_name = ENTITY_ID_FORMAT.format(
                 slugify(self._prefix + "_" + self._cname)
             )
-            self._name = sensor_name_format.format(name=alias, sensorname="", sensor="")
+            self._attr_name = sensor_name_format.format(
+                name=alias, sensorname="", sensor=""
+            )
         else:
             self._entity_id = ENTITY_ID_FORMAT.format(
-                slugify(self._prefix + "_" + self._cname + "_" + self._var_name)
+                slugify(
+                    self._prefix
+                    + "_"
+                    + self._cname
+                    + "_"
+                    + self.entity_description.name
+                )
             )
-            self._name = sensor_name_format.format(
-                name=alias, sensorname=self._var_name, sensor=self._var_name
+            self._attr_name = sensor_name_format.format(
+                name=alias,
+                sensorname=self.entity_description.name,
+                sensor=self.entity_description.name,
             )
 
         self._state = None
         self._state_extra = None
 
-        self._attributes: dict[str, Any] = {}
+        self._attr_extra_state_attributes: dict[str, Any] = {}
         self._removed = False
 
         _LOGGER.info(
             "[%s] %s: Initializing sensor with parameter: %s",
             self._instance,
             self._cname,
-            self._var_name,
+            self.entity_description.name,
         )
 
     @property
@@ -360,25 +343,23 @@ class DockerContainerSensor(SensorEntity):
         return self._entity_id
 
     @property
-    def name(self) -> str:
-        """Return the name of the sensor, if any."""
-        return self._name
-
-    @property
     def icon(self) -> str:
         """Icon to use in the frontend, if any."""
-        if self._var_id == CONTAINER_INFO_STATUS:
+        if self.entity_description.key == CONTAINER_INFO_STATUS:
             if self._state_extra == "running":
                 return "mdi:checkbox-marked-circle-outline"
             else:
                 return "mdi:checkbox-blank-circle-outline"
-        elif self._var_id in [CONTAINER_INFO_ALLINONE, CONTAINER_INFO_STATE]:
+        elif self.entity_description.key in [
+            CONTAINER_INFO_ALLINONE,
+            CONTAINER_INFO_STATE,
+        ]:
             if self._state == "running":
                 return "mdi:checkbox-marked-circle-outline"
             else:
                 return "mdi:checkbox-blank-circle-outline"
 
-        return self._var_icon
+        return self.entity_description.icon
 
     @property
     def should_poll(self) -> bool:
@@ -389,29 +370,11 @@ class DockerContainerSensor(SensorEntity):
         """Return the state of the sensor."""
         return self._state
 
-    @property
-    def device_class(self) -> str | None:
-        """Return the class of this sensor."""
-        return self._var_class
-
-    @property
-    def state_class(self) -> str | None:
-        """Return the state class of this sensor."""
-        return self._var_state_class
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        """Return the unit the value is expressed in."""
-        return self._var_unit
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return the state attributes."""
-        return self._attributes
-
     async def async_added_to_hass(self) -> None:
         """Register callbacks."""
-        self._container.register_callback(self.event_callback, self._var_id)
+        self._container.register_callback(
+            self.event_callback, self.entity_description.key
+        )
 
         # Call event callback for possible information available
         self.event_callback()
@@ -428,7 +391,7 @@ class DockerContainerSensor(SensorEntity):
                 "[%s] %s: Removing sensor entity: %s",
                 self._instance,
                 self._cname,
-                self._var_id,
+                self.entity_description.key,
             )
             self._loop.create_task(self.async_remove())
             self._removed = True
@@ -440,7 +403,7 @@ class DockerContainerSensor(SensorEntity):
             "[%s] %s: Received callback for: %s",
             self._instance,
             self._cname,
-            self._var_name,
+            self.entity_description.name,
         )
 
         stats = {}
@@ -459,12 +422,12 @@ class DockerContainerSensor(SensorEntity):
                 str(err),
             )
         else:
-            if self._var_id == CONTAINER_INFO_ALLINONE:
+            if self.entity_description.key == CONTAINER_INFO_ALLINONE:
                 # The state is mandatory
                 state = info.get(CONTAINER_INFO_STATE)
 
                 # Now list the rest of the attributes
-                self._attributes = {}
+                self._attr_extra_state_attributes = {}
                 for cond in self._condition_list:
                     if cond in [
                         CONTAINER_INFO_STATUS,
@@ -472,26 +435,31 @@ class DockerContainerSensor(SensorEntity):
                         CONTAINER_INFO_HEALTH,
                         CONTAINER_INFO_UPTIME,
                     ]:
-                        self._attributes[cond] = info.get(cond, None)
+                        self._attr_extra_state_attributes[cond] = info.get(cond, None)
                     else:
-                        self._attributes[cond] = stats.get(cond, None)
-            elif self._var_id == CONTAINER_INFO_STATUS:
+                        self._attr_extra_state_attributes[cond] = stats.get(cond, None)
+            elif self.entity_description.key == CONTAINER_INFO_STATUS:
                 state = info.get(CONTAINER_INFO_STATUS)
                 self._state_extra = info.get(CONTAINER_INFO_STATE)
-            elif self._var_id in [
+            elif self.entity_description.key in [
                 CONTAINER_INFO_STATE,
                 CONTAINER_INFO_IMAGE,
                 CONTAINER_INFO_HEALTH,
             ]:
-                state = info.get(self._var_id)
+                state = info.get(self.entity_description.key)
             elif info.get(CONTAINER_INFO_STATE) == "running":
-                if self._var_id in CONTAINER_MONITOR_LIST:
-                    if self._var_id in [CONTAINER_INFO_UPTIME]:
-                        state = info.get(self._var_id)
+                if self.entity_description.key in CONTAINER_MONITOR_LIST:
+                    if self.entity_description.key in [CONTAINER_INFO_UPTIME]:
+                        state = datetime.fromisoformat(
+                            info.get(self.entity_description.key)
+                        )
                     else:
-                        state = stats.get(self._var_id)
+                        state = stats.get(self.entity_description.key)
 
-        if state != self._state or self._var_id == CONTAINER_INFO_ALLINONE:
+        if (
+            state != self._state
+            or self.entity_description.key == CONTAINER_INFO_ALLINONE
+        ):
             self._state = state
 
             try:
