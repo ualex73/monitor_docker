@@ -169,7 +169,6 @@ class DockerContainerSwitch(SwitchEntity):
         alias: str,
         name_format: str,
     ):
-        self._loop = asyncio.get_running_loop()
         self._container = container
         self._instance = instance
         self._prefix = prefix
@@ -233,7 +232,7 @@ class DockerContainerSwitch(SwitchEntity):
                 return
 
             _LOGGER.info("[%s] %s: Removing switch entity", self._instance, self._cname)
-            self._loop.create_task(self.async_remove())
+            asyncio.create_task(self.async_remove())
             self._removed = True
             return
 

@@ -2,8 +2,6 @@
 
 import asyncio
 import logging
-import threading
-import time
 from datetime import timedelta
 
 import homeassistant.helpers.config_validation as cv
@@ -92,13 +90,8 @@ CONFIG_SCHEMA = vol.Schema(
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Will setup the Monitor Docker platform."""
 
-    def RunDocker(hass: HomeAssistant, entry: ConfigType) -> None:
+    async def RunDocker(hass: HomeAssistant, entry: ConfigType) -> None:
         """Wrapper around function for a separated thread."""
-
-        # Create out asyncio loop, because we are already inside
-        # a def (not main) we need to do create/set
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
 
         # Create docker instance, it will have asyncio threads
         hass.data[DOMAIN][entry[CONF_NAME]] = {}
@@ -110,9 +103,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             doLoop = True
 
             try:
-                hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(
-                    hass, entry, startCount
-                )
+                hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(hass, entry)
+                await hass.data[DOMAIN][entry[CONF_NAME]][API].init(startCount)
             except Exception as err:
                 doLoop = False
                 if entry[CONF_RETRY] == 0:
@@ -120,13 +112,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 else:
                     _LOGGER.error("Failed Docker connect: %s", str(err))
                     _LOGGER.error("Retry in %d seconds", entry[CONF_RETRY])
-                    time.sleep(entry[CONF_RETRY])
+                    await asyncio.sleep(entry[CONF_RETRY])
 
             startCount += 1
 
             if doLoop:
                 # Now run forever in this separated thread
-                loop.run_forever()
+                # loop.run_forever()
 
                 # We only get here if a docker instance disconnected or HASS is stopping
                 if not hass.data[DOMAIN][entry[CONF_NAME]][API]._dockerStopped:
@@ -155,9 +147,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             return False
 
         # Each docker hosts runs in its own thread. We need to pass hass too, for the load_platform
-        thread = threading.Thread(
-            target=RunDocker, kwargs={"hass": hass, "entry": entry}
-        )
-        thread.start()
+        asyncio.create_task(RunDocker(hass, entry))
 
     return True

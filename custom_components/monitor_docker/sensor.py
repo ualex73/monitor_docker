@@ -194,7 +194,6 @@ class DockerSensor(SensorEntity):
     ):
         """Initialize the sensor."""
 
-        self._loop = asyncio.get_running_loop()
         self._api = api
         self._instance = instance
         self._prefix = prefix
@@ -265,7 +264,7 @@ class DockerSensor(SensorEntity):
                 self._instance,
                 self.entity_description.key,
             )
-            self._loop.create_task(self.async_remove())
+            asyncio.create_task(self.async_remove())
             self._removed = True
             return
 
@@ -287,7 +286,6 @@ class DockerContainerSensor(SensorEntity):
     ):
         """Initialize the sensor."""
 
-        self._loop = asyncio.get_running_loop()
         self._instance = instance
         self._container = container
         self._prefix = prefix
@@ -393,7 +391,7 @@ class DockerContainerSensor(SensorEntity):
                 self._cname,
                 self.entity_description.key,
             )
-            self._loop.create_task(self.async_remove())
+            asyncio.create_task(self.async_remove())
             self._removed = True
             return
 

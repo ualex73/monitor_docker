@@ -5,11 +5,7 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import (
-    PERCENTAGE,
-    UnitOfDataRate,
-    UnitOfInformation,
-)
+from homeassistant.const import PERCENTAGE, UnitOfDataRate, UnitOfInformation
 
 DOMAIN = "monitor_docker"
 API = "api"

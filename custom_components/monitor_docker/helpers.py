@@ -4,9 +4,7 @@ import asyncio
 import concurrent
 import logging
 import os
-import time
 from datetime import datetime, timezone
-from turtle import st
 from typing import Any, Callable
 
 import aiodocker
@@ -85,7 +83,7 @@ def toMB(value: float, precision: int = PRECISION) -> float:
 class DockerAPI:
     """Docker API abstraction allowing multiple Docker instances beeing monitored."""
 
-    def __init__(self, hass: HomeAssistant, config: ConfigType, startCount=0):
+    def __init__(self, hass: HomeAssistant, config: ConfigType):
         """Initialize the Docker API."""
 
         self._hass = hass
@@ -98,13 +96,14 @@ class DockerAPI:
         self._event_destroy: dict[str, int] = {}
         self._dockerStopped = False
         self._subscribers: list[Callable] = []
+        self._version1904 = None
+        self._api: aiodocker.Docker = None
 
         _LOGGER.debug("[%s]: Helper version: %s", self._instance, VERSION)
 
         self._interval: int = config[CONF_SCAN_INTERVAL].seconds
 
-        self._loop = asyncio.get_event_loop()
-
+    async def init(self, startCount=0):
         try:
             # Try to fix unix:// to unix:/// (3 are required by aiodocker)
             url: str = self._config[CONF_URL]
@@ -117,7 +116,7 @@ class DockerAPI:
 
             # When we reconnect with tcp, we should delay - docker is maybe not fully ready
             if startCount > 0 and url is not None and url.find("unix:") != 0:
-                time.sleep(5)
+                await asyncio.sleep(5)
 
             # Do some debugging logging for TCP/TLS
             if url is not None:
@@ -170,11 +169,10 @@ class DockerAPI:
             )
             return
 
-        versionInfo = self._loop.run_until_complete(self._api.version())
+        versionInfo = await self._api.version()
         version: str | None = versionInfo.get("Version", None)
 
         # Compare version with 19.03 when memory calculation has changed
-        self._version1904 = None
         if version is not None:
             try:
                 if tuple(map(int, (version.split(".")[0:2]))) > tuple(
@@ -194,13 +192,13 @@ class DockerAPI:
         )
 
         # Start task to monitor events of create/delete/start/stop
-        self._tasks["events"] = self._loop.create_task(self._run_docker_events())
+        self._tasks["events"] = asyncio.create_task(self._run_docker_events())
 
         # Start task to monitor total/running containers
-        self._tasks["info"] = self._loop.create_task(self._run_docker_info())
+        self._tasks["info"] = asyncio.create_task(self._run_docker_info())
 
         # Get the list of containers to monitor
-        containers = self._loop.run_until_complete(self._api.containers.list(all=True))
+        containers = await self._api.containers.list(all=True)
 
         for container in containers or []:
             # Determine name from Docker API, it contains an array with a slash
@@ -217,8 +215,9 @@ class DockerAPI:
                 cname,
                 version1904=self._version1904,
             )
+            await self._containers[cname].init()
 
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
+        self._hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
 
         for component in COMPONENTS:
             load_platform(
@@ -234,8 +233,6 @@ class DockerAPI:
         """Stop the monitor thread."""
 
         _LOGGER.info("[%s]: Stopping Monitor Docker thread", self._instance)
-
-        self._loop.stop()
 
     #############################################################
     def remove_entities(self) -> None:
@@ -290,7 +287,6 @@ class DockerAPI:
                                 str(err),
                                 exc_info=True,
                             )
-                            pass
 
                     # Stop everything and return to the main thread
                     self._monitor_stop(self._config[CONF_NAME])
@@ -321,7 +317,7 @@ class DockerAPI:
                             )
 
                         if self._event_create and not taskcreated:
-                            self._loop.create_task(self._container_create_destroy())
+                            await self._container_create_destroy()
 
                     elif event["Action"] == "destroy":
                         # Check if another task is running, ifso, we don't create a new one
@@ -354,7 +350,7 @@ class DockerAPI:
                             )
 
                         if self._event_destroy and not taskcreated:
-                            self._loop.create_task(self._container_create_destroy())
+                            await self._container_create_destroy()
                     elif event["Action"] == "rename":
                         # during a docker-compose up -d <container> the old container can be renamed
                         # sensors/switch should be removed before the new container is monitored
@@ -690,16 +686,13 @@ class DockerContainerAPI:
         self._info: dict[str, Any] = {}
         self._stats: dict[str, Any] = {}
 
-        self._loop = asyncio.get_event_loop()
-
+    async def init(self):
         # During start-up we will wait on container attachment,
         # preventing concurrency issues the main HA loop (we are
         # othside that one with our threads)
         if self._atInit:
             try:
-                self._container = self._loop.run_until_complete(
-                    self._api.containers.get(self._name)
-                )
+                self._container = await self._api.containers.get(self._name)
             except Exception as err:
                 _LOGGER.error(
                     "[%s] %s: Container not available anymore (1) (%s)",
@@ -710,7 +703,7 @@ class DockerContainerAPI:
                 )
                 return
 
-            self._task = self._loop.create_task(self._run())
+            self._task = asyncio.create_task(self._run())
 
     #############################################################
     async def _initGetContainer(self) -> bool:
@@ -730,7 +723,7 @@ class DockerContainerAPI:
             )
             return False
 
-        self._task = self._loop.create_task(self._run())
+        self._task = asyncio.create_task(self._run())
 
         return True
 
@@ -1209,7 +1202,7 @@ class DockerContainerAPI:
         _LOGGER.info("[%s] %s: Start container", self._instance, self._name)
 
         self._busy = True
-        self._loop.create_task(self._start())
+        await self._start()
 
     #############################################################
     async def _stop(self) -> None:
@@ -1232,7 +1225,7 @@ class DockerContainerAPI:
         _LOGGER.info("[%s] %s: Stop container", self._instance, self._name)
 
         self._busy = True
-        self._loop.create_task(self._stop())
+        await self._stop()
 
     #############################################################
     async def _restart(self) -> None:
@@ -1255,7 +1248,7 @@ class DockerContainerAPI:
         _LOGGER.info("[%s] %s: Restart container", self._instance, self._name)
 
         self._busy = True
-        self._loop.create_task(self._restart())
+        await self._restart()
 
     #############################################################
     def get_name(self) -> str:
