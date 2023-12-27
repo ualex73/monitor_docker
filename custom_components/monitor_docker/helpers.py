@@ -1,25 +1,24 @@
 """Monitor Docker API helper."""
 
-import aiodocker
 import asyncio
 import concurrent
 import logging
 import os
-import time
-
 from datetime import datetime, timezone
-from dateutil import parser, relativedelta
+from typing import Any, Callable
 
-from homeassistant.helpers.discovery import load_platform
-
+import aiodocker
 import homeassistant.util.dt as dt_util
-
+from dateutil import parser, relativedelta
 from homeassistant.const import (
     CONF_NAME,
     CONF_SCAN_INTERVAL,
     CONF_URL,
     EVENT_HOMEASSISTANT_STOP,
 )
+from homeassistant.core import Event, HomeAssistant
+from homeassistant.helpers.discovery import load_platform
+from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     ATTR_MEMORY_LIMIT,
@@ -37,28 +36,28 @@ from .const import (
     CONF_PRECISION_NETWORK_KB,
     CONF_PRECISION_NETWORK_MB,
     CONTAINER,
-    CONTAINER_STATS_CPU_PERCENTAGE,
-    CONTAINER_STATS_1CPU_PERCENTAGE,
+    CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_IMAGE,
     CONTAINER_INFO_NETWORK_AVAILABLE,
-    CONTAINER_STATS_MEMORY,
-    CONTAINER_STATS_MEMORY_PERCENTAGE,
-    CONTAINER_STATS_NETWORK_SPEED_UP,
-    CONTAINER_STATS_NETWORK_SPEED_DOWN,
-    CONTAINER_STATS_NETWORK_TOTAL_UP,
-    CONTAINER_STATS_NETWORK_TOTAL_DOWN,
-    DOCKER_INFO_IMAGES,
     CONTAINER_INFO_STATE,
-    CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_STATUS,
     CONTAINER_INFO_UPTIME,
-    DOCKER_INFO_CONTAINER_RUNNING,
+    CONTAINER_STATS_1CPU_PERCENTAGE,
+    CONTAINER_STATS_CPU_PERCENTAGE,
+    CONTAINER_STATS_MEMORY,
+    CONTAINER_STATS_MEMORY_PERCENTAGE,
+    CONTAINER_STATS_NETWORK_SPEED_DOWN,
+    CONTAINER_STATS_NETWORK_SPEED_UP,
+    CONTAINER_STATS_NETWORK_TOTAL_DOWN,
+    CONTAINER_STATS_NETWORK_TOTAL_UP,
     DOCKER_INFO_CONTAINER_PAUSED,
+    DOCKER_INFO_CONTAINER_RUNNING,
     DOCKER_INFO_CONTAINER_STOPPED,
     DOCKER_INFO_CONTAINER_TOTAL,
+    DOCKER_INFO_IMAGES,
     DOCKER_INFO_VERSION,
-    DOCKER_STATS_CPU_PERCENTAGE,
     DOCKER_STATS_1CPU_PERCENTAGE,
+    DOCKER_STATS_CPU_PERCENTAGE,
     DOCKER_STATS_MEMORY,
     DOCKER_STATS_MEMORY_PERCENTAGE,
     DOMAIN,
@@ -70,43 +69,44 @@ VERSION = "1.15"
 _LOGGER = logging.getLogger(__name__)
 
 
-def toKB(value, precision=PRECISION):
+def toKB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to kBytes."""
-    return round(value / (1024 ** 1), precision)
+    return round(value / (1024**1), precision)
 
 
-def toMB(value, precision=PRECISION):
+def toMB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to MBytes."""
-    return round(value / (1024 ** 2), precision)
+    return round(value / (1024**2), precision)
 
 
 #################################################################
 class DockerAPI:
     """Docker API abstraction allowing multiple Docker instances beeing monitored."""
 
-    def __init__(self, hass, config, startCount=0):
+    def __init__(self, hass: HomeAssistant, config: ConfigType):
         """Initialize the Docker API."""
 
         self._hass = hass
         self._config = config
-        self._instance = config[CONF_NAME]
-        self._containers = {}
-        self._tasks = {}
-        self._info = {}
-        self._event_create = {}
-        self._event_destroy = {}
+        self._instance: str = config[CONF_NAME]
+        self._containers: dict[str, DockerContainerAPI] = {}
+        self._tasks: dict[str, asyncio.Task] = {}
+        self._info: dict[str, Any] = {}
+        self._event_create: dict[str, int] = {}
+        self._event_destroy: dict[str, int] = {}
         self._dockerStopped = False
-        self._subscribers = []
+        self._subscribers: list[Callable] = []
+        self._version1904 = None
+        self._api: aiodocker.Docker = None
 
         _LOGGER.debug("[%s]: Helper version: %s", self._instance, VERSION)
 
-        self._interval = config[CONF_SCAN_INTERVAL].seconds
+        self._interval: int = config[CONF_SCAN_INTERVAL].seconds
 
-        self._loop = asyncio.get_event_loop()
-
+    async def init(self, startCount=0):
         try:
             # Try to fix unix:// to unix:/// (3 are required by aiodocker)
-            url = self._config[CONF_URL]
+            url: str = self._config[CONF_URL]
             if (
                 url is not None
                 and url.find("unix://") == 0
@@ -116,7 +116,7 @@ class DockerAPI:
 
             # When we reconnect with tcp, we should delay - docker is maybe not fully ready
             if startCount > 0 and url is not None and url.find("unix:") != 0:
-                time.sleep(5)
+                await asyncio.sleep(5)
 
             # Do some debugging logging for TCP/TLS
             if url is not None:
@@ -169,11 +169,10 @@ class DockerAPI:
             )
             return
 
-        versionInfo = self._loop.run_until_complete(self._api.version())
-        version = versionInfo.get("Version", None)
+        versionInfo = await self._api.version()
+        version: str | None = versionInfo.get("Version", None)
 
         # Compare version with 19.03 when memory calculation has changed
-        self._version1904 = None
         if version is not None:
             try:
                 if tuple(map(int, (version.split(".")[0:2]))) > tuple(
@@ -193,17 +192,17 @@ class DockerAPI:
         )
 
         # Start task to monitor events of create/delete/start/stop
-        self._tasks["events"] = self._loop.create_task(self._run_docker_events())
+        self._tasks["events"] = asyncio.create_task(self._run_docker_events())
 
         # Start task to monitor total/running containers
-        self._tasks["info"] = self._loop.create_task(self._run_docker_info())
+        self._tasks["info"] = asyncio.create_task(self._run_docker_info())
 
         # Get the list of containers to monitor
-        containers = self._loop.run_until_complete(self._api.containers.list(all=True))
+        containers = await self._api.containers.list(all=True)
 
         for container in containers or []:
             # Determine name from Docker API, it contains an array with a slash
-            cname = container._container["Names"][0][1:]
+            cname: str = container._container["Names"][0][1:]
 
             # We will monitor all containers, including excluded ones.
             # This is needed to get total CPU/Memory usage.
@@ -216,8 +215,9 @@ class DockerAPI:
                 cname,
                 version1904=self._version1904,
             )
+            await self._containers[cname].init()
 
-        hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
+        self._hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
 
         for component in COMPONENTS:
             load_platform(
@@ -229,15 +229,13 @@ class DockerAPI:
             )
 
     #############################################################
-    def _monitor_stop(self, _service_or_event):
+    def _monitor_stop(self, _service_or_event: Event) -> None:
         """Stop the monitor thread."""
 
         _LOGGER.info("[%s]: Stopping Monitor Docker thread", self._instance)
 
-        self._loop.stop()
-
     #############################################################
-    def remove_entities(self):
+    def remove_entities(self) -> None:
         """Remove docker info entities."""
 
         if len(self._subscribers) > 0:
@@ -249,25 +247,24 @@ class DockerAPI:
         for callback in self._subscribers:
             callback(remove=True)
 
-        self._subscriber = []
+        self._subscriber: list[Callable] = []
 
     #############################################################
-    def register_callback(self, callback, variable):
+    def register_callback(self, callback: Callable, variable: str) -> None:
         """Register callback from sensor."""
         if callback not in self._subscribers:
             _LOGGER.debug("[%s]: Added callback entity: %s", self._instance, variable)
             self._subscribers.append(callback)
 
     #############################################################
-    async def _run_docker_events(self):
+    async def _run_docker_events(self) -> None:
         """Function to retrieve docker events. We can add or remove monitored containers."""
 
         try:
             subscriber = self._api.events.subscribe()
 
             while True:
-
-                event = await subscriber.get()
+                event: dict = await subscriber.get()
 
                 # When we receive none, the connection normally is broken
                 if event is None:
@@ -290,7 +287,6 @@ class DockerAPI:
                                 str(err),
                                 exc_info=True,
                             )
-                            pass
 
                     # Stop everything and return to the main thread
                     self._monitor_stop(self._config[CONF_NAME])
@@ -321,7 +317,7 @@ class DockerAPI:
                             )
 
                         if self._event_create and not taskcreated:
-                            self._loop.create_task(self._container_create_destroy())
+                            await self._container_create_destroy()
 
                     elif event["Action"] == "destroy":
                         # Check if another task is running, ifso, we don't create a new one
@@ -354,7 +350,7 @@ class DockerAPI:
                             )
 
                         if self._event_destroy and not taskcreated:
-                            self._loop.create_task(self._container_create_destroy())
+                            await self._container_create_destroy()
                     elif event["Action"] == "rename":
                         # during a docker-compose up -d <container> the old container can be renamed
                         # sensors/switch should be removed before the new container is monitored
@@ -395,12 +391,11 @@ class DockerAPI:
             )
 
     #############################################################
-    async def _container_create_destroy(self):
+    async def _container_create_destroy(self) -> None:
         """Handles create or destroy of container events."""
 
         try:
             while self._event_create or self._event_destroy:
-
                 # Go through create loop first
                 for cname in self._event_create:
                     if self._event_create[cname] > 2:
@@ -428,8 +423,7 @@ class DockerAPI:
             )
 
     #############################################################
-    async def _container_add(self, cname):
-
+    async def _container_add(self, cname: str) -> None:
         if cname in self._containers:
             _LOGGER.error("[%s] %s: Container already monitored", self._instance, cname)
             return
@@ -462,8 +456,7 @@ class DockerAPI:
             )
 
     #############################################################
-    async def _container_remove(self, cname):
-
+    async def _container_remove(self, cname: str) -> None:
         if cname in self._containers:
             _LOGGER.debug("[%s] %s: Stopping Container Monitor", self._instance, cname)
             self._containers[cname].cancel_task()
@@ -474,14 +467,13 @@ class DockerAPI:
             _LOGGER.error("[%s] %s: Container is NOT monitored", self._instance, cname)
 
     #############################################################
-    async def _run_docker_info(self):
+    async def _run_docker_info(self) -> None:
         """Function to retrieve information like docker info."""
 
         loopInit = False
 
         try:
             while True:
-
                 if self._dockerStopped:
                     _LOGGER.debug("[%s]: Stopping docker info thread", self._instance)
                     break
@@ -644,7 +636,7 @@ class DockerAPI:
         return self._containers.keys()
 
     #############################################################
-    def get_container(self, cname):
+    def get_container(self, cname: str) -> "DockerContainerAPI":
         if cname in self._containers:
             return self._containers[cname]
         else:
@@ -654,7 +646,7 @@ class DockerAPI:
             return None
 
     #############################################################
-    def get_info(self):
+    def get_info(self) -> dict[str, Any]:
         return self._info
 
 
@@ -664,46 +656,43 @@ class DockerContainerAPI:
 
     def __init__(
         self,
-        config,
-        api,
-        cname,
+        config: ConfigType,
+        api: aiodocker.Docker,
+        cname: str,
         atInit=True,
-        version1904=None,
+        version1904: bool | None = None,
     ):
         self._config = config
         self._api = api
         self._version1904 = version1904
-        self._instance = config[CONF_NAME]
-        self._memChange = config[CONF_MEMORYCHANGE]
+        self._instance: str = config[CONF_NAME]
+        self._memChange: int = config[CONF_MEMORYCHANGE]
         self._name = cname
-        self._interval = config[CONF_SCAN_INTERVAL].seconds
+        self._interval: int = config[CONF_SCAN_INTERVAL].seconds
         self._busy = False
         self._atInit = atInit
-        self._task = None
-        self._subscribers = []
-        self._cpu_old = {}
-        self._network_old = {}
+        self._task: asyncio.Task | None = None
+        self._subscribers: list[Callable] = []
+        self._cpu_old: dict[str, int] = {}
+        self._network_old: dict[str, int | datetime] = {}
         self._network_error = 0
         self._memory_error = 0
         self._cpu_error = 0
-        self._memory_prev = None
+        self._memory_prev: float | None = None
         self._memory_prev_breach = False
-        self._memory_percent_prev = None
+        self._memory_percent_prev: float | None = None
         self._memory_percent_prev_breach = False
 
-        self._info = {}
-        self._stats = {}
+        self._info: dict[str, Any] = {}
+        self._stats: dict[str, Any] = {}
 
-        self._loop = asyncio.get_event_loop()
-
+    async def init(self):
         # During start-up we will wait on container attachment,
         # preventing concurrency issues the main HA loop (we are
         # othside that one with our threads)
         if self._atInit:
             try:
-                self._container = self._loop.run_until_complete(
-                    self._api.containers.get(self._name)
-                )
+                self._container = await self._api.containers.get(self._name)
             except Exception as err:
                 _LOGGER.error(
                     "[%s] %s: Container not available anymore (1) (%s)",
@@ -714,11 +703,10 @@ class DockerContainerAPI:
                 )
                 return
 
-            self._task = self._loop.create_task(self._run())
+            self._task = asyncio.create_task(self._run())
 
     #############################################################
-    async def _initGetContainer(self):
-
+    async def _initGetContainer(self) -> bool:
         # If we noticed a event=create, we need to attach here.
         # The run_until_complete doesn't work, because we are already
         # in a running loop.
@@ -735,17 +723,16 @@ class DockerContainerAPI:
             )
             return False
 
-        self._task = self._loop.create_task(self._run())
+        self._task = asyncio.create_task(self._run())
 
         return True
 
     #############################################################
-    async def _run(self):
+    async def _run(self) -> None:
         """Loop to gather container info/stats."""
 
         while True:
             try:
-
                 # Don't check container if we are doing a start/stop
                 if not self._busy:
                     await self._run_container_info()
@@ -783,7 +770,7 @@ class DockerContainerAPI:
             await asyncio.sleep(self._interval)
 
     #############################################################
-    async def _run_container_info(self):
+    async def _run_container_info(self) -> None:
         """Get container information, but we can not get
         the uptime of this container, that is only available
         while listing all containers :-(.
@@ -791,7 +778,7 @@ class DockerContainerAPI:
 
         self._info = {}
 
-        raw = await self._container.show()
+        raw: dict = await self._container.show()
 
         self._info[CONTAINER_INFO_STATE] = raw["State"]["Status"]
         self._info[CONTAINER_INFO_IMAGE] = raw["Config"]["Image"]
@@ -851,10 +838,9 @@ class DockerContainerAPI:
             )
 
     #############################################################
-    async def _run_container_stats(self):
-
+    async def _run_container_stats(self) -> None:
         # Initialize stats information
-        stats = {}
+        stats: dict[str, Any] = {}
         stats["cpu"] = {}
         stats["memory"] = {}
         stats["network"] = {}
@@ -862,7 +848,7 @@ class DockerContainerAPI:
 
         # Get container stats, only interested in [0]
         raw = await self._container.stats(stream=False)
-        raw = raw[0]
+        raw: dict[str, Any] = raw[0]
 
         stats["read"] = parser.parse(raw["read"])
 
@@ -908,7 +894,6 @@ class DockerContainerAPI:
             self._cpu_error = 0
 
         except KeyError as err:
-
             # Something wrong with the raw data
             if self._cpu_error == 0:
                 _LOGGER.error(
@@ -931,7 +916,7 @@ class DockerContainerAPI:
             self._cpu_error += 1
 
         # Gather memory information
-        memory_stats = {}
+        memory_stats: dict[str, float | None] = {}
 
         try:
             memory_stats["usage"] = None
@@ -976,7 +961,6 @@ class DockerContainerAPI:
             self._memory_error = 0
 
         except (KeyError, TypeError) as err:
-
             if self._memory_error == 0:
                 _LOGGER.error(
                     "[%s] %s: Cannot determine memory usage for container (%s)",
@@ -1037,9 +1021,9 @@ class DockerContainerAPI:
             self._memory_prev_breach = False
 
         """
-        self._memory_prev = None 
+        self._memory_prev = None
         self._memory_prev_breach = False
-        self._memory_percent_prev = None 
+        self._memory_percent_prev = None
         self._memory_percent_prev_breach = False
         """
 
@@ -1064,7 +1048,7 @@ class DockerContainerAPI:
             self._memory_percent_prev = memory_stats.get("usage_percent", None)
 
         # Gather network information, doesn't work in network=host mode
-        network_stats = {}
+        network_stats: dict[str, int | float] = {}
         if self._info[CONTAINER_INFO_NETWORK_AVAILABLE]:
             try:
                 network_new = {}
@@ -1159,7 +1143,7 @@ class DockerContainerAPI:
         self._stats = stats
 
     #############################################################
-    def cancel_task(self):
+    def cancel_task(self) -> None:
         if self._task is not None:
             _LOGGER.info(
                 "[%s] %s: Cancelling task for container info/stats",
@@ -1175,7 +1159,7 @@ class DockerContainerAPI:
             )
 
     #############################################################
-    def rename_entities_containername(self):
+    def rename_entities_containername(self) -> None:
         if len(self._subscribers) > 0:
             _LOGGER.debug(
                 "[%s] %s: Renaming entities for container", self._instance, self._name
@@ -1185,7 +1169,7 @@ class DockerContainerAPI:
             callback(rename=True, name=self._name)
 
     #############################################################
-    def remove_entities(self):
+    def remove_entities(self) -> None:
         if len(self._subscribers) > 0:
             _LOGGER.debug(
                 "[%s] %s: Removing entities from container", self._instance, self._name
@@ -1194,10 +1178,10 @@ class DockerContainerAPI:
         for callback in self._subscribers:
             callback(remove=True)
 
-        self._subscriber = []
+        self._subscriber: list[Callable] = []
 
     #############################################################
-    async def _start(self):
+    async def _start(self) -> None:
         """Separate loop to start container, because HA loop can't be used."""
 
         try:
@@ -1213,15 +1197,15 @@ class DockerContainerAPI:
             self._busy = False
 
     #############################################################
-    async def start(self):
+    async def start(self) -> None:
         """Called from HA switch."""
         _LOGGER.info("[%s] %s: Start container", self._instance, self._name)
 
         self._busy = True
-        self._loop.create_task(self._start())
+        await self._start()
 
     #############################################################
-    async def _stop(self):
+    async def _stop(self) -> None:
         """Separate loop to stop container, because HA loop can't be used."""
         try:
             await self._container.stop(t=10)
@@ -1236,15 +1220,15 @@ class DockerContainerAPI:
             self._busy = False
 
     #############################################################
-    async def stop(self):
+    async def stop(self) -> None:
         """Called from HA switch."""
         _LOGGER.info("[%s] %s: Stop container", self._instance, self._name)
 
         self._busy = True
-        self._loop.create_task(self._stop())
+        await self._stop()
 
     #############################################################
-    async def _restart(self):
+    async def _restart(self) -> None:
         """Separate loop to stop container, because HA loop can't be used."""
         try:
             await self._container.restart()
@@ -1259,35 +1243,35 @@ class DockerContainerAPI:
             self._busy = False
 
     #############################################################
-    async def restart(self):
+    async def restart(self) -> None:
         """Called from service call."""
         _LOGGER.info("[%s] %s: Restart container", self._instance, self._name)
 
         self._busy = True
-        self._loop.create_task(self._restart())
+        await self._restart()
 
     #############################################################
-    def get_name(self):
+    def get_name(self) -> str:
         """Return the container name."""
         return self._name
 
     #############################################################
-    def set_name(self, name):
+    def set_name(self, name: str) -> None:
         """Set the container name."""
         self._name = name
 
     #############################################################
-    def get_info(self):
+    def get_info(self) -> dict:
         """Return the container info."""
         return self._info
 
     #############################################################
-    def get_stats(self):
+    def get_stats(self) -> dict:
         """Return the container stats."""
         return self._stats
 
     #############################################################
-    def register_callback(self, callback, variable):
+    def register_callback(self, callback: Callable, variable: str):
         """Register callback from sensor/switch."""
         if callback not in self._subscribers:
             _LOGGER.debug(
@@ -1299,7 +1283,7 @@ class DockerContainerAPI:
             self._subscribers.append(callback)
 
     #############################################################
-    def _notify(self):
+    def _notify(self) -> None:
         if len(self._subscribers) > 0:
             _LOGGER.debug(
                 "[%s] %s: Send notify (%d) to container",
@@ -1313,7 +1297,7 @@ class DockerContainerAPI:
 
     #############################################################
     @staticmethod
-    def _calcdockerformat(dt):
+    def _calcdockerformat(dt: datetime) -> str:
         """Calculate datetime to Docker format, because it isn't available in stats."""
         if dt is None:
             return "None"
