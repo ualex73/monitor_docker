@@ -211,6 +211,11 @@ CONTAINER_MONITOR_LIST = {
         icon="mdi:download",
         state_class=SensorStateClass.TOTAL_INCREASING,
     ),
+    CONTAINER_INFO_ALLINONE: SensorEntityDescription(
+        key=CONTAINER_INFO_ALLINONE,
+        name="AllInOne",
+        icon="mdi:checkbox-marked-circle-outline",
+    ),
 }
 
 CONTAINER_MONITOR_NETWORK_LIST = [
