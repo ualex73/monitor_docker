@@ -213,7 +213,7 @@ CONTAINER_MONITOR_LIST = {
     ),
     CONTAINER_INFO_ALLINONE: SensorEntityDescription(
         key=CONTAINER_INFO_ALLINONE,
-        name="AllInOne",
+        name="State",
         icon="mdi:checkbox-marked-circle-outline",
     ),
 }

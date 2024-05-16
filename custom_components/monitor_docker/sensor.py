@@ -295,11 +295,9 @@ class DockerContainerSensor(SensorEntity):
         self.entity_description = description
 
         if self.entity_description.key == CONTAINER_INFO_ALLINONE:
-            self.entity_description = CONTAINER_MONITOR_LIST[CONTAINER_INFO_STATE]
-
-        self._state_extra = None
-
-        if self.entity_description.key == CONTAINER_INFO_ALLINONE:
+            self._entity_id = ENTITY_ID_FORMAT.format(
+                slugify(self._prefix + "_" + self._cname)
+            )
             self._attr_name = ENTITY_ID_FORMAT.format(
                 slugify(self._prefix + "_" + self._cname)
             )
@@ -401,7 +399,7 @@ class DockerContainerSensor(SensorEntity):
             "[%s] %s: Received callback for: %s",
             self._instance,
             self._cname,
-            self.entity_description.name,
+            self.entity_description.key,
         )
 
         stats = {}
