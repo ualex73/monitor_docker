@@ -64,19 +64,19 @@ from .const import (
     PRECISION,
 )
 
-VERSION = "1.15"
+VERSION = "1.17"
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def toKB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to kBytes."""
-    return round(value / (1024**1), precision)
+    return round(value / (1024 ** 1), precision)
 
 
 def toMB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to MBytes."""
-    return round(value / (1024**2), precision)
+    return round(value / (1024 ** 2), precision)
 
 
 #################################################################
@@ -369,15 +369,54 @@ class DockerAPI:
                                 oname,
                                 cname,
                             )
-                            self._containers[cname] = self._containers[oname]
-                            del self._containers[oname]
 
-                            # We also need to rename the internal name
-                            self._containers[cname].set_name(cname)
+                            # First remove the newly create container, has a temporary name
+                            if oname in self._event_create:
+                                _LOGGER.warning(
+                                    "[%s] %s: Event rename received, but create wasn't executed yet",
+                                    self._instance,
+                                    oname,
+                                )
+                                del self._event_create[cname]
+                            elif oname not in self._event_destroy:
+                                _LOGGER.debug(
+                                    "[%s] %s: Event rename (destroy) container",
+                                    self._instance,
+                                    oname,
+                                )
+                                self._event_destroy[oname] = 0
+                            else:
+                                _LOGGER.error(
+                                    "%s: Event rename (destroy) container, but already in working table?",
+                                    oname,
+                                )
 
-                            # We also should remove entities, rename does not work
-                            self._containers[cname].remove_entities()
+                            if self._event_destroy and not taskcreated:
+                                await self._container_create_destroy()
 
+                            # Second re-add the container with the original name
+                            taskcreated = (
+                                True
+                                if self._event_create or self._event_destroy
+                                else False
+                            )
+
+                            if cname not in self._event_create:
+                                _LOGGER.debug(
+                                    "[%s] %s: Event rename (create) container",
+                                    self._instance,
+                                    cname,
+                                )
+                                self._event_create[cname] = 0
+                            else:
+                                _LOGGER.error(
+                                    "[%s] %s: Event rename (create) container, but already in working table?",
+                                    self._instance,
+                                    cname,
+                                )
+
+                            if self._event_create and not taskcreated:
+                                await self._container_create_destroy()
                         else:
                             _LOGGER.error(
                                 "[%s] %s: Event rename container doesn't exist in list?",
