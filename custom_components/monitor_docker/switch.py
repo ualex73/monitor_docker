@@ -66,7 +66,7 @@ async def async_setup_platform(
                 await server_api.get_container(cname).restart()
             else:
                 _LOGGER.error(
-                    "Service restart failed, container '%s'does not exist", cname
+                    "Service restart failed, container '%s' does not exist", cname
                 )
         elif cname in server_config[CONF_CONTAINERS]:
             _LOGGER.debug("Trying to restart container '%s'", cname)
