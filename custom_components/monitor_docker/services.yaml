@@ -1,9 +1,9 @@
 restart:
-  description: "Restart a container, the container must be configured in monitor_docker."
   fields:
     name:
-      description: Name of the container
-      example: "nodered"
+      required: true
+      selector:
+        text:
     server:
-      description: Name of the server, as given in config. Only required if you have more than one docker host config.
-      example: "mediaserver"
+      selector:
+        text:

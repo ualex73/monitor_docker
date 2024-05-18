@@ -1,0 +1,13 @@
+{
+    "services": {
+        "restart": {
+            "name": "Mulai Ulang"
+        },
+        "start": {
+            "name": "Mulai"
+        },
+        "stop": {
+            "name": "Hentikan"
+        }
+    }
+}
