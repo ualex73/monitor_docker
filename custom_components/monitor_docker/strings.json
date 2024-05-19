@@ -1,6 +1,5 @@
 {
     "services": {
-    "services": {
         "reload": {
             "name": "[%key:common::action::reload%]",
             "description": "Reloads all monitor_docker entities."
