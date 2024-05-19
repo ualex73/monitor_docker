@@ -2,12 +2,6 @@
     "services": {
         "restart": {
             "name": "Uruchom ponownie"
-        },
-        "start": {
-            "name": "Start"
-        },
-        "stop": {
-            "name": "Stop"
         }
     }
 }

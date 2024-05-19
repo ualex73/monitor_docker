@@ -1,5 +1,10 @@
 {
     "services": {
+    "services": {
+        "reload": {
+            "name": "[%key:common::action::reload%]",
+            "description": "Reloads all monitor_docker entities."
+        },
         "restart": {
             "name": "[%key:common::action::restart%]",
             "description": "Restart a container, the container must be configured in monitor_docker.",

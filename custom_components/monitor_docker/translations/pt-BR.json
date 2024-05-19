@@ -2,12 +2,6 @@
     "services": {
         "restart": {
             "name": "Reiniciar"
-        },
-        "start": {
-            "name": "Iniciar"
-        },
-        "stop": {
-            "name": "Parar"
         }
     }
 }

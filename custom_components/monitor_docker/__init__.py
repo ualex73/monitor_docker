@@ -14,6 +14,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.helpers.reload import async_setup_reload_service
 
 from .const import (
     API,
@@ -125,6 +126,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     # If HASS stopped, do not retry
                     break
 
+    # Setup reload service
+    #await async_setup_reload_service(hass, DOMAIN, [DOMAIN])
+
     # Create domain monitor_docker data variable
     hass.data[DOMAIN] = {}
 
@@ -150,3 +154,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         asyncio.create_task(RunDocker(hass, entry))
 
     return True
+
+#################################################################
+async def async_reset_platform(hass: HomeAssistant, integration_name: str) -> None:
+    """Reload the integration."""
+    if DOMAIN not in hass.data:
+        _LOGGER.error("monitor_docker not loaded")
+
