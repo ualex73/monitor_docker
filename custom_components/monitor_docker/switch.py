@@ -3,8 +3,10 @@
 import asyncio
 import logging
 import re
+from typing import Any
 
 import voluptuous as vol
+from custom_components.monitor_docker.helpers import DockerAPI, DockerContainerAPI
 from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
@@ -13,8 +15,6 @@ from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import slugify
-
-from custom_components.monitor_docker.helpers import DockerAPI, DockerContainerAPI
 
 from .const import (
     API,
@@ -206,12 +206,12 @@ class DockerContainerSwitch(SwitchEntity):
     def is_on(self) -> bool:
         return self._state
 
-    async def async_turn_on(self) -> None:
+    async def async_turn_on(self, **kwargs: Any) -> None:
         await self._container.start()
         self._state = True
         self.async_schedule_update_ha_state()
 
-    async def async_turn_off(self) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         await self._container.stop()
         self._state = False
         self.async_schedule_update_ha_state()

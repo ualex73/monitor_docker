@@ -886,8 +886,8 @@ class DockerContainerAPI:
         stats["read"] = {}
 
         # Get container stats, only interested in [0]
-        raw = await self._container.stats(stream=False)
-        raw: dict[str, Any] = raw[0]
+        rawarr = await self._container.stats(stream=False)
+        raw: dict[str, Any] = rawarr[0]
 
         stats["read"] = parser.parse(raw["read"])
 

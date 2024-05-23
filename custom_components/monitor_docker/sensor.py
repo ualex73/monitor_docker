@@ -201,7 +201,7 @@ class DockerSensor(SensorEntity):
         self.entity_description = description
 
         self._entity_id: str = ENTITY_ID_FORMAT.format(
-            slugify(self._prefix + "_" + self.entity_description.name)
+            slugify(f"{self._prefix}_{self.entity_description.name}")
         )
         self._name = "{name} {sensor}".format(
             name=self._prefix, sensor=self.entity_description
@@ -223,11 +223,11 @@ class DockerSensor(SensorEntity):
         return self._entity_id
 
     @property
-    def native_value(self) -> str:
+    def native_value(self) -> str | None:
         """Return the state of the sensor."""
         return self._state
 
-    def update(self):
+    def update(self) -> None:
         """Get the latest data for the states."""
         info = self._api.get_info()
 
@@ -247,11 +247,11 @@ class DockerSensor(SensorEntity):
         """Return the state attributes."""
         return self._attributes
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Register callbacks."""
         self._api.register_callback(self.event_callback, self.entity_description.key)
 
-    def event_callback(self, remove=False):
+    def event_callback(self, remove=False) -> None:
         """Callback to remove Docker entity."""
 
         # If already called before, do not remove it again
@@ -296,23 +296,17 @@ class DockerContainerSensor(SensorEntity):
 
         if self.entity_description.key == CONTAINER_INFO_ALLINONE:
             self._entity_id = ENTITY_ID_FORMAT.format(
-                slugify(self._prefix + "_" + self._cname)
+                slugify(f"{self._prefix}_{self._cname}")
             )
             self._attr_name = ENTITY_ID_FORMAT.format(
-                slugify(self._prefix + "_" + self._cname)
+                slugify(f"{self._prefix}_{self._cname}")
             )
             self._attr_name = sensor_name_format.format(
                 name=alias, sensorname="", sensor=""
             )
         else:
             self._entity_id = ENTITY_ID_FORMAT.format(
-                slugify(
-                    self._prefix
-                    + "_"
-                    + self._cname
-                    + "_"
-                    + self.entity_description.name
-                )
+                slugify(f"{self._prefix}_{self._cname}_{self.entity_description.name}")
             )
             self._attr_name = sensor_name_format.format(
                 name=alias,

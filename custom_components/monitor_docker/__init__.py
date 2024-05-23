@@ -55,11 +55,9 @@ DOCKER_SCHEMA = vol.Schema(
         vol.Optional(CONF_PREFIX, default=""): cv.string,
         vol.Optional(CONF_URL, default=None): vol.Any(cv.string, None),
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
-        vol.Optional(
-            CONF_MONITORED_CONDITIONS, default=MONITORED_CONDITIONS_LIST
-        ): vol.All(
+        vol.Optional(CONF_MONITORED_CONDITIONS, default=[]): vol.All(
             cv.ensure_list,
-            [vol.In(MONITORED_CONDITIONS_LIST + list([CONTAINER_INFO_ALLINONE]))],
+            [vol.In(MONITORED_CONDITIONS_LIST)],
         ),
         vol.Optional(CONF_CONTAINERS, default=[]): cv.ensure_list,
         vol.Optional(CONF_CONTAINERS_EXCLUDE, default=[]): cv.ensure_list,
@@ -127,13 +125,21 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                     break
 
     # Setup reload service
-    #await async_setup_reload_service(hass, DOMAIN, [DOMAIN])
+    # await async_setup_reload_service(hass, DOMAIN, [DOMAIN])
 
     # Create domain monitor_docker data variable
     hass.data[DOMAIN] = {}
 
     # Now go through all possible entries, we support 1 or more docker hosts (untested)
     for entry in config[DOMAIN]:
+
+        # Default MONITORED_CONDITIONS_LIST also contains allinone, so we need to fix it up here
+        if len(entry[CONF_MONITORED_CONDITIONS]) == 0:
+            # Add whole list, including allinone
+            entry[CONF_MONITORED_CONDITIONS] = MONITORED_CONDITIONS_LIST
+            # remove the allinone
+            entry[CONF_MONITORED_CONDITIONS].remove(CONTAINER_INFO_ALLINONE)
+
         # Check if CONF_MONITORED_CONDITIONS has only ALLINONE, then expand to all
         if (
             len(entry[CONF_MONITORED_CONDITIONS]) == 1
@@ -155,9 +161,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     return True
 
+
 #################################################################
 async def async_reset_platform(hass: HomeAssistant, integration_name: str) -> None:
     """Reload the integration."""
     if DOMAIN not in hass.data:
         _LOGGER.error("monitor_docker not loaded")
-
