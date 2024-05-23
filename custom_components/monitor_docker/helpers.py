@@ -822,10 +822,15 @@ class DockerContainerAPI:
         self._info[CONTAINER_INFO_STATE] = raw["State"]["Status"]
         self._info[CONTAINER_INFO_IMAGE] = raw["Config"]["Image"]
 
-        if CONTAINER_INFO_NETWORK_AVAILABLE not in self._info:
-            self._info[CONTAINER_INFO_NETWORK_AVAILABLE] = (
-                False if raw["HostConfig"]["NetworkMode"] in ["host", "none"] else True
-            )
+        if self._network_error <= 5:
+            if CONTAINER_INFO_NETWORK_AVAILABLE not in self._info:
+                self._info[CONTAINER_INFO_NETWORK_AVAILABLE] = (
+                    False
+                    if raw["HostConfig"]["NetworkMode"] in ["host", "none"]
+                    else True
+                )
+        else:
+            self._info[CONTAINER_INFO_NETWORK_AVAILABLE] = False
 
         try:
             self._info[CONTAINER_INFO_HEALTH] = raw["State"]["Health"]["Status"]
