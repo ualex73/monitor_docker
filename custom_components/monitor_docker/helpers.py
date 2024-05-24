@@ -568,13 +568,11 @@ class DockerAPI:
                     self._info[ATTR_MEMORY_LIMIT] is not None
                     and self._info[ATTR_MEMORY_LIMIT] != 0
                 ):
-                    self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = (
+                    self._info[DOCKER_STATS_MEMORY_PERCENTAGE] = round(
                         self._info[DOCKER_STATS_MEMORY]
-                        / toMB(
-                            self._info[ATTR_MEMORY_LIMIT],
-                            self._config[CONF_PRECISION_MEMORY_PERCENTAGE],
-                        )
-                        * 100
+                        / toMB(self._info[ATTR_MEMORY_LIMIT], 4)
+                        * 100,
+                        self._config[CONF_PRECISION_MEMORY_PERCENTAGE],
                     )
 
                 # Try to fix possible 0 values in history at start-up
@@ -922,7 +920,7 @@ class DockerContainerAPI:
                         (cpu_delta / system_delta)
                         * float(cpu_stats["online_cpus"])
                         * 100.0,
-                        PRECISION,
+                        self._config[CONF_PRECISION_CPU],
                     )
 
             self._cpu_old = cpu_new
@@ -991,7 +989,7 @@ class DockerContainerAPI:
             )
             memory_stats["usage_percent"] = round(
                 float(memory_stats["usage"]) / float(memory_stats["limit"]) * 100.0,
-                PRECISION,
+                self._config[CONF_PRECISION_MEMORY_PERCENTAGE],
             )
 
             if self._memory_error > 0:
