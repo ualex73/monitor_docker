@@ -169,30 +169,31 @@ Here are some possible questions/errors with their answers.
     **Answer:** Yes, with an external docker container. Home Assistant supervised does not expose the Docker UNIX/TCP socket. However, you can use an external docker container named `docker-socket-proxy`. Start this docker with the following docker-compose code. It exposes the socket over TCP and `monitor_docker` can listen to it.
     ```yaml
     # Proxy the Docker sock so that we can pick up stats for HomeAssistant
-    dockerproxy:
-      image: tecnativa/docker-socket-proxy
-      container_name: dockerproxy
-      privileged: true
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-      ports:
-        - 2375:2375
-      environment:
-        - BUILD=1
-        - COMMIT=1
-        - CONFIGS=1
-        - CONTAINERS=1
-        - DISTRIBUTION=1
-        - EXEC=1
-        - IMAGES=1
-        - INFO=1
-        - NETWORKS=1
-        - NODES=1
-        - PLUGINS=1
-        - SERVICES=1
-        - SESSSION=1
-        - SWARM=1
-        - POST=1
+    services:
+      dockerproxy:
+        image: tecnativa/docker-socket-proxy
+        container_name: dockerproxy
+        privileged: true
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+        ports:
+          - 2375:2375
+        environment:
+          - BUILD=1
+          - COMMIT=1
+          - CONFIGS=1
+          - CONTAINERS=1
+          - DISTRIBUTION=1
+          - EXEC=1
+          - IMAGES=1
+          - INFO=1
+          - NETWORKS=1
+          - NODES=1
+          - PLUGINS=1
+          - SERVICES=1
+          - SESSSION=1
+          - SWARM=1
+          - POST=1
     ```
     Add the following to your `configuration.yaml`:
 ```yaml
