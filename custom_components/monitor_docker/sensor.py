@@ -29,6 +29,7 @@ from .const import (
     CONF_CONTAINERS_EXCLUDE,
     CONF_PREFIX,
     CONF_RENAME,
+    CONF_RENAME_ENITITY,
     CONF_SENSORNAME,
     CONFIG,
     CONTAINER,
@@ -137,15 +138,22 @@ async def async_setup_platform(
                         )
                     ):
                         monitor_conditions += [variable]
+
+                # Only force rename of entityid is requested, to not break backwards compatibility
+                alias_entityid = cname
+                if config[CONF_RENAME_ENITITY]:
+                    alias_entityid = find_rename(config[CONF_RENAME], cname)
+
                 sensors += [
                     DockerContainerSensor(
                         capi,
-                        instance,
-                        prefix,
-                        cname,
-                        find_rename(config[CONF_RENAME], cname),
-                        CONTAINER_MONITOR_LIST[CONTAINER_INFO_ALLINONE],
-                        config[CONF_SENSORNAME],
+                        instance=instance,
+                        prefix=prefix,
+                        cname=cname,
+                        alias_entityid=alias_entityid,
+                        alias_name=find_rename(config[CONF_RENAME], cname),
+                        description=CONTAINER_MONITOR_LIST[CONTAINER_INFO_ALLINONE],
+                        sensor_name_format=config[CONF_SENSORNAME],
                         condition_list=monitor_conditions,
                     )
                 ]
@@ -158,15 +166,22 @@ async def async_setup_platform(
                             and variable not in CONTAINER_MONITOR_NETWORK_LIST
                         )
                     ):
+
+                        # Only force rename of entityid is requested, to not break backwards compatibility
+                        alias_entityid = cname
+                        if config[CONF_RENAME_ENITITY]:
+                            alias_entityid = find_rename(config[CONF_RENAME], cname)
+
                         sensors += [
                             DockerContainerSensor(
                                 capi,
-                                instance,
-                                prefix,
-                                cname,
-                                find_rename(config[CONF_RENAME], cname),
-                                CONTAINER_MONITOR_LIST[variable],
-                                config[CONF_SENSORNAME],
+                                instance=instance,
+                                prefix=prefix,
+                                cname=cname,
+                                alias_entityid=alias_entityid,
+                                alias_name=find_rename(config[CONF_RENAME], cname),
+                                description=CONTAINER_MONITOR_LIST[variable],
+                                sensor_name_format=config[CONF_SENSORNAME],
                             )
                         ]
 
@@ -279,7 +294,8 @@ class DockerContainerSensor(SensorEntity):
         instance: str,
         prefix: str,
         cname: str,
-        alias: str,
+        alias_entityid: str,
+        alias_name: str,
         description: SensorEntityDescription,
         sensor_name_format: str,
         condition_list: list | None = None,
@@ -296,20 +312,22 @@ class DockerContainerSensor(SensorEntity):
 
         if self.entity_description.key == CONTAINER_INFO_ALLINONE:
             self._entity_id = ENTITY_ID_FORMAT.format(
-                slugify(f"{self._prefix}_{self._cname}")
+                slugify(f"{self._prefix}_{alias_entityid}")
             )
             self._attr_name = ENTITY_ID_FORMAT.format(
-                slugify(f"{self._prefix}_{self._cname}")
+                slugify(f"{self._prefix}_{alias_entityid}")
             )
             self._attr_name = sensor_name_format.format(
-                name=alias, sensorname="", sensor=""
+                name=alias_name, sensorname="", sensor=""
             )
         else:
             self._entity_id = ENTITY_ID_FORMAT.format(
-                slugify(f"{self._prefix}_{self._cname}_{self.entity_description.name}")
+                slugify(
+                    f"{self._prefix}_{alias_entityid}_{self.entity_description.name}"
+                )
             )
             self._attr_name = sensor_name_format.format(
-                name=alias,
+                name=alias_name,
                 sensorname=self.entity_description.name,
                 sensor=self.entity_description.name,
             )

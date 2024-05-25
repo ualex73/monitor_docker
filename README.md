@@ -115,7 +115,8 @@ monitor_docker:
 | containers                  | list           (Optional)  | Array of containers to monitor. Defaults to all containers.           |
 | containers_exclude          | list           (Optional)  | Array of containers to be excluded from monitoring, when all containers are included. |
 | monitored_conditions        | list           (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
-| rename                      | dictionary     (Optional)  | Dictionary of containers to rename. Default no renaming.              |
+| rename                      | dictionary     (Optional)  | Dictionary of containers to rename. Renaming is done on the name in HA Lovelove, not the entity name (see `rename_entity`). Default no renaming. |
+| rename_entity               | boolean        (Optional)  | If rename is enabled, it changes the name in HA Loveloce, not the entity name. Enable this setting to also rename the entitu name (Default: False) |
 | sensorname                  | string         (Optional)  | Sensor string to format the name used in Home Assistant. Defaults to `{name} {sensor}`, where `{name}` is the container name and `{sensor}` is e.g. Memory, Status, Network speed Up |
 | switchname                  | string         (Optional)  | Switch string to format the name used in Home Assistant. Defaults to `{name}`, where `{name}` is the container name. |
 | switchenabled               | boolean / list (Optional)  | Enable/Disable the switch entity for containers (Default: `True` Enabled switch for all containers, `False`: Disabled switch for all containers). Or specify a list of containers for which to enable switch entities. |
