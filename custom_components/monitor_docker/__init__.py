@@ -137,8 +137,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         # Default MONITORED_CONDITIONS_LIST also contains allinone, so we need to fix it up here
         if len(entry[CONF_MONITORED_CONDITIONS]) == 0:
-            # Add whole list, including allinone
-            entry[CONF_MONITORED_CONDITIONS] = MONITORED_CONDITIONS_LIST
+            # Add whole list, including allinone. Make a copy, no reference
+            entry[CONF_MONITORED_CONDITIONS] = MONITORED_CONDITIONS_LIST.copy()
             # remove the allinone
             entry[CONF_MONITORED_CONDITIONS].remove(CONTAINER_INFO_ALLINONE)
 
