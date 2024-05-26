@@ -8,7 +8,7 @@ This repository contains the Monitor Docker component I developed for monitoring
 
 ## Monitor Docker
 
-The Monitor Docker allows you to monitor Docker and container statistics and turn on/off containers. It can connected to the Docker daemon locally or remotely. When Home Assistant is used within a Docker container, the Docker daemon should be mounted as follows `-v /var/run/docker.sock:/var/run/docker.sock`.
+The Monitor Docker allows you to monitor Docker and container statistics and turn on/off containers. It can connect to the Docker daemon locally or remotely. When Home Assistant is used within a Docker container, the Docker daemon should be mounted as follows `-v /var/run/docker.sock:/var/run/docker.sock`.
 
 **Docker run Example**
 ```
@@ -205,7 +205,7 @@ Here are some possible questions/errors with their answers.
 2. **Error:** `Missing valid docker_host.Either DOCKER_HOST or local sockets are not available.`  
     **Answer:** Most likely the socket is not mounted properly in your Home Assistant container. Please check if you added the volume `/var/run/docker.sock`
 3. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via tcp://10.0.0.1:2376...)`.  
-    **Answer:** You are trying to connect via TCP and most likely the remote address is unavailable. Test it with the command `docker -H tcp://10.0.0.1:2376 ps` if it works (replace `10.0.0.1` with your IP address)
+    **Answer:** You are trying to connect via TCP and most likely the remote address is unavailable. Test it with the command `docker -H tcp://10.0.0.1:2376 ps` if it works (replace `10.0.0.1` with your IP address). Also you can consult the following URL for more help: https://docs.docker.com/config/daemon/remote-access/
 4. **Question:** Is Docker TCP socket via TLS supported?  
     **Answer:** Yes it is. You need to set the url to e.g. `tcp://ip:2376` and the environment variables `DOCKER_TLS_VERIFY=1` and `DOCKER_CERT_PATH=<path to your certificates>` need to be set  
 The following is a docker-compose example how to set the environment variables and the volume with the certificates:
@@ -255,6 +255,8 @@ monitor_docker:
      **Answer:** Such feature goes outside of the scope of monitor_docker and there are few other options available for this. You can use https://newreleases.io or https://github.com/crazy-max/diun/    
 12. **Question:** Is Docker via SSH supported?  
      **Answer:** No, the Docker library used, does not support it. There is a small _but_, maybe you can get it to work via `socat`. The following URL may help you: https://serverfault.com/questions/127794/forward-local-port-or-socket-file-to-remote-socket-file/362833#362833
+13. **Question:** Can the sensors have an unique entity identifiers? This is useful for renaming it in the HA GUI
+     **Answer:** This is not possible, due to the nature how this integration works. The docker name needs to be consistent across restart and recreate, this can be only doing by overruling the entity identifier as it is working now
 
 ## Credits
 
