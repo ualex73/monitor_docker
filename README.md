@@ -255,8 +255,8 @@ monitor_docker:
      **Answer:** Such feature goes outside of the scope of monitor_docker and there are few other options available for this. You can use https://newreleases.io or https://github.com/crazy-max/diun/    
 12. **Question:** Is Docker via SSH supported?  
      **Answer:** No, the Docker library used, does not support it. There is a small _but_, maybe you can get it to work via `socat`. The following URL may help you: https://serverfault.com/questions/127794/forward-local-port-or-socket-file-to-remote-socket-file/362833#362833
-13. **Question:** Can the sensors have an unique entity identifiers? This is useful for renaming it in the HA GUI
-     **Answer:** This is not possible, due to the nature how this integration works. The docker name needs to be consistent across restart and recreate, this can be only doing by overruling the entity identifier as it is working now
+13. **Question:** Can the sensors have an unique entity identifiers? This is useful for renaming it in the HA GUI  
+     **Answer:** This is not possible, due to the nature how this integration works. The docker name needs to be consistent across restart and recreate, this can be only doing by overruling the entity identifier as it is working now  
 
 ## Credits
 
