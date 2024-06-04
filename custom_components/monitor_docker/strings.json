@@ -1,0 +1,22 @@
+{
+    "services": {
+        "reload": {
+            "name": "[%key:common::action::reload%]",
+            "description": "Reloads all monitor_docker entities."
+        },
+        "restart": {
+            "name": "[%key:common::action::restart%]",
+            "description": "Restart a container, the container must be configured in monitor_docker.",
+            "fields": {
+                "name": {
+                    "description": "Name of the container.",
+                    "name": "Name"
+                },
+                "server": {
+                    "description": "Name of the server, as given in config. Only required if you have more than one docker host config.",
+                    "name": "Server"
+                }
+            }
+        }
+    }
+}

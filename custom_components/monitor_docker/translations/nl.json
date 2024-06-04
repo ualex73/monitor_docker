@@ -1,0 +1,22 @@
+{
+    "services": {
+        "reload": {
+            "description": "Herlaad alle monitor_docker entiteiten.",
+            "name": "Herladen"
+        },
+        "restart": {
+            "description": "Herstart een container, deze container moet geconfigureerd zijn in monitor_docker.",
+            "fields": {
+                "name": {
+                    "description": "Naam van de container.",
+                    "name": "Name"
+                },
+                "server": {
+                    "description": "Naam van de server, zoals geconfigueerd in de config. Alleen vereist als je meer an 1 docker host in je configuratie hebt.",
+                    "name": "Server"
+                }
+            },
+            "name": "Herstarten"
+        }
+    }
+}
