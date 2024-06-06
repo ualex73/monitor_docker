@@ -154,7 +154,7 @@ class DockerContainerButton(ButtonEntity):
         self._cname = cname
         self._state = False
         self._entity_id = ENTITY_ID_FORMAT.format(
-            slugify(self._prefix + "_" + self._cname)
+            slugify(self._prefix + "_" + self._cname + "_restart")
         )
         self._name = name_format.format(name=alias)
         self._removed = False
@@ -192,7 +192,7 @@ class DockerContainerButton(ButtonEntity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
-        self._container.register_callback(self.event_callback, "switch")
+        self._container.register_callback(self.event_callback, "button")
 
         # Call event callback for possible information available
         self.event_callback()
