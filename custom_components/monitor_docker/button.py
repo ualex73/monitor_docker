@@ -1,11 +1,19 @@
+"""Monitor Docker button component."""
+
 import asyncio
 import logging
 import re
-import voluptuous as vol
+from typing import Any
 
+import voluptuous as vol
+from custom_components.monitor_docker.helpers import DockerAPI, DockerContainerAPI
 from homeassistant.components.button import ENTITY_ID_FORMAT, ButtonEntity
 from homeassistant.const import CONF_NAME
-from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_platform
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import slugify
 
 from .const import (
@@ -16,6 +24,7 @@ from .const import (
     CONF_CONTAINERS_EXCLUDE,
     CONF_PREFIX,
     CONF_RENAME,
+    CONF_RENAME_ENITITY,
     CONF_BUTTONENABLED,
     CONF_BUTTONNAME,
     CONFIG,
@@ -30,10 +39,15 @@ SERVICE_RESTART_SCHEMA = vol.Schema({ATTR_NAME: cv.string, ATTR_SERVER: cv.strin
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+async def async_setup_platform(
+    hass: HomeAssistant,
+    config: ConfigType,
+    async_add_entities: AddEntitiesCallback,
+    discovery_info: DiscoveryInfoType | None = None,
+):
     """Set up the Monitor Docker Button."""
 
-    async def async_restart(parm):
+    async def async_restart(parm) -> None:
         cname = parm.data[ATTR_NAME]
         cserver = parm.data.get(ATTR_SERVER, None)
 
@@ -68,7 +82,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 "Service restart failed, container '%s' is not configured", cname
             )
 
-    def find_rename(d, item):
+    def find_rename(d: dict[str, str], item: str) -> str:
         for k in d:
             if re.match(k, item):
                 return d[k]
@@ -117,14 +131,21 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 or cname in config[CONF_BUTTONENABLED]
             ):
                 _LOGGER.debug("[%s] %s: Adding component Button", instance, cname)
+
+                # Only force rename of entityid is requested, to not break backwards compatibility
+                alias_entityid = cname
+                if config[CONF_RENAME_ENITITY]:
+                    alias_entityid = find_rename(config[CONF_RENAME], cname)
+
                 buttons.append(
                     DockerContainerButton(
                         api.get_container(cname),
-                        instance,
-                        prefix,
-                        cname,
-                        find_rename(config[CONF_RENAME], cname),
-                        config[CONF_BUTTONNAME],
+                        instance=instance,
+                        prefix=prefix,
+                        cname=cname,
+                        alias_entityid=alias_entityid,
+                        alias_name=find_rename(config[CONF_RENAME], cname),
+                        name_format=config[CONF_BUTTONNAME],
                     )
                 )
             else:
@@ -146,58 +167,66 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
 #################################################################
 class DockerContainerButton(ButtonEntity):
-    def __init__(self, container, instance, prefix, cname, alias, name_format):
-        self._loop = asyncio.get_running_loop()
+    def __init__(
+        self, 
+        container: DockerContainerAPI,
+        instance: str,
+        prefix: str,
+        cname: str,
+        alias_entityid: str,
+        alias_name: str,
+        name_format: str,
+    ):
         self._container = container
         self._instance = instance
         self._prefix = prefix
         self._cname = cname
         self._state = False
-        self._entity_id = ENTITY_ID_FORMAT.format(
-            slugify(self._prefix + "_" + self._cname)
+        self._entity_id: str = ENTITY_ID_FORMAT.format(
+            slugify(f"{self._prefix}_{alias_entityid}")
         )
-        self._name = name_format.format(name=alias)
+        self._name = name_format.format(name=alias_name)
         self._removed = False
 
     @property
-    def entity_id(self):
+    def entity_id(self) -> str:
         """Return the entity id of the button."""
         return self._entity_id
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Return the name of the sensor."""
         return self._name
 
     @property
-    def should_poll(self):
+    def should_poll(self) -> bool:
         return False
 
     @property
-    def icon(self):
+    def icon(self) -> str:
         return "mdi:docker"
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict:
         return {}
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         return self._state
                                  
-    async def async_press(self):
+    async def async_press(self, **kwargs: Any) -> None:
         await self._container.restart()
         self._state = False
         self.async_schedule_update_ha_state()
 
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Register callbacks."""
-        self._container.register_callback(self.event_callback, "switch")
+        self._container.register_callback(self.event_callback, "button")
 
         # Call event callback for possible information available
         self.event_callback()
 
-    def event_callback(self, name="", remove=False):
+    def event_callback(self, name="", remove=False) -> None:
         """Callback for update of container information."""
 
         if remove:
