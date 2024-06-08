@@ -1285,7 +1285,7 @@ class DockerContainerAPI:
             self._busy = False
 
     #############################################################
-    async def _restart_button(self):
+    async def _restart_button(self): -> None:
         """Called from HA button."""
         _LOGGER.info("[%s] %s: Restart container", self._instance, self._name)
 
