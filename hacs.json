@@ -1,5 +1,4 @@
 {
   "name": "Monitor Docker",
-  "render_readme": false,
-  "domains": ["sensor", "switch"]
+  "render_readme": true
 }

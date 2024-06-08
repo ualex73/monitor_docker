@@ -1,10 +1,10 @@
 {
   "domain": "monitor_docker",
   "name": "Monitor Docker",
-  "version": "1.10",
+  "codeowners": ["@ualex73"],
   "documentation": "https://github.com/ualex73/monitor_docker",
+  "iot_class": "local_polling",
   "issue_tracker": "https://github.com/ualex73/monitor_docker/issues",
   "requirements": ["aiodocker==0.21.0", "python-dateutil==2.8.2"],
-  "codeowners": ["@ualex73"],
-  "iot_class": "local_polling"
+  "version": "1.18"
 }

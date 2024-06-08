@@ -1,0 +1,7 @@
+{
+    "services": {
+        "restart": {
+            "name": "\u91cd\u65b0\u5f00\u59cb"
+        }
+    }
+}

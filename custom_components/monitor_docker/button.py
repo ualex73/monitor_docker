@@ -182,8 +182,8 @@ class DockerContainerButton(ButtonEntity):
         self._prefix = prefix
         self._cname = cname
         self._state = False
-        self._entity_id: str = ENTITY_ID_FORMAT.format(
-            slugify(f"{self._prefix}_{alias_entityid}")
+        self._entity_id = ENTITY_ID_FORMAT.format(
+            slugify(self._prefix + "_" + self._cname + "_restart")
         )
         self._name = name_format.format(name=alias_name)
         self._removed = False

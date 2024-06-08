@@ -1,0 +1,7 @@
+{
+    "services": {
+        "restart": {
+            "name": "Restart"
+        }
+    }
+}
