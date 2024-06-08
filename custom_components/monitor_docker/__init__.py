@@ -71,7 +71,7 @@ DOCKER_SCHEMA = vol.Schema(
         vol.Optional(CONF_SWITCHENABLED, default=True): vol.Any(
             cv.boolean, cv.ensure_list(cv.string)
         ),
-        vol.Optional(CONF_BUTTONENABLED, default=True): vol.Any(
+        vol.Optional(CONF_BUTTONENABLED, default=False): vol.Any(
             cv.boolean, cv.ensure_list(cv.string)
         ),
         vol.Optional(CONF_SWITCHNAME, default=DEFAULT_SWITCHNAME): cv.string,
