@@ -391,7 +391,8 @@ class DockerAPI:
                                     oname,
                                 )
 
-                            if self._event_destroy and not taskcreated:
+                            # taskcreate is not unavailable, so remove for now
+                            if self._event_destroy:
                                 await self._container_create_destroy()
 
                             # Second re-add the container with the original name
@@ -890,7 +891,12 @@ class DockerContainerAPI:
 
         # Get container stats, only interested in [0]
         rawarr = await self._container.stats(stream=False)
-        raw: dict[str, Any] = rawarr[0]
+
+        # Could be out-of-range when stopping/renaming
+        try:
+            raw: dict[str, Any] = rawarr[0]
+        except IndexError:
+            return
 
         stats["read"] = parser.parse(raw["read"])
 
