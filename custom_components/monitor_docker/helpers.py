@@ -276,7 +276,7 @@ class DockerAPI:
                     # Remove the docker info sensors
                     self.remove_entities()
 
-                    # Remove all the sensors/switches, they will be auto created if connection is working again
+                    # Remove all the sensors/switches/buttons, they will be auto created if connection is working again
                     for cname in list(self._containers.keys()):
                         try:
                             await self._container_remove(cname)
@@ -353,7 +353,7 @@ class DockerAPI:
                             await self._container_create_destroy()
                     elif event["Action"] == "rename":
                         # during a docker-compose up -d <container> the old container can be renamed
-                        # sensors/switch should be removed before the new container is monitored
+                        # sensors/switch/button should be removed before the new container is monitored
 
                         # New name
                         cname = event["Actor"]["Attributes"]["name"]
@@ -478,7 +478,7 @@ class DockerAPI:
         result = await self._containers[cname]._initGetContainer()
 
         if result:
-            # Lets wait 1 second before we try to create sensors/switches
+            # Lets wait 1 second before we try to create sensors/switches/buttons
             await asyncio.sleep(1)
 
             for component in COMPONENTS:
@@ -1285,6 +1285,14 @@ class DockerContainerAPI:
             self._busy = False
 
     #############################################################
+    async def _restart_button(self) -> None:
+        """Called from HA button."""
+        _LOGGER.info("[%s] %s: Restart container", self._instance, self._name)
+
+        self._busy = True
+        await self._restart()
+
+    #############################################################
     async def restart(self) -> None:
         """Called from service call."""
         _LOGGER.info("[%s] %s: Restart container", self._instance, self._name)
@@ -1314,7 +1322,7 @@ class DockerContainerAPI:
 
     #############################################################
     def register_callback(self, callback: Callable, variable: str):
-        """Register callback from sensor/switch."""
+        """Register callback from sensor/switch/button."""
         if callback not in self._subscribers:
             _LOGGER.debug(
                 "[%s] %s: Added callback to container, entity: %s",
