@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -e
+
+# Install HomeAssistant latest release
+# Setup base user with 'dev' UN & PWD
+
+python3 -m pip install colorlog && \
+python3 -m pip install homeassistant && \
+hass --script auth add dev dev
