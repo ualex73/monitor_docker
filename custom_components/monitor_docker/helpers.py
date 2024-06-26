@@ -751,9 +751,17 @@ class DockerContainerAPI:
 
         try:
             self._container = await self._api.containers.get(self._name)
+        except aiodocker.exceptions.DockerError as err:
+            _LOGGER.error(
+                "[%s] %s: Container not available anymore (2a) (%s)",
+                self._instance,
+                self._name,
+                str(err),
+            )
+            return False
         except Exception as err:
             _LOGGER.error(
-                "[%s] %s: Container not available anymore (2) (%s)",
+                "[%s] %s: Container not available anymore (2b) (%s)",
                 self._instance,
                 self._name,
                 str(err),
@@ -795,9 +803,16 @@ class DockerContainerAPI:
                 )
                 pass
                 break
+            except aiodocker.exceptions.DockerError as err:
+                _LOGGER.error(
+                    "[%s] %s: Container not available anymore (3a) (%s)",
+                    self._instance,
+                    self._name,
+                    str(err),
+                )
             except Exception as err:
                 _LOGGER.error(
-                    "[%s] %s: Container not available anymore (3) (%s)",
+                    "[%s] %s: Container not available anymore (3b) (%s)",
                     self._instance,
                     self._name,
                     str(err),

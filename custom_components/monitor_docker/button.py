@@ -235,7 +235,7 @@ class DockerContainerButton(ButtonEntity):
                 return
 
             _LOGGER.info("[%s] %s: Removing button entity", self._instance, self._cname)
-            self._loop.create_task(self.async_remove())
+            asyncio.create_task(self.async_remove())
             self._removed = True
             return
 
