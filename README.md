@@ -109,7 +109,7 @@ monitor_docker:
 | Parameter                   | Type                       | Description                                                           |
 | --------------------------- | -------------------------- | --------------------------------------------------------------------- |
 | name                        | string         (Required)  | Client name of Docker daemon. Defaults to `Docker`.                   |
-| url                         | string         (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `tcp://ip:2376`. Do NOT add a slash add the end, this will invalid the URL. For TLS support see Q&A section. SSH is not supported. |
+| url                         | string         (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `tcp://ip:2375`. Do NOT add a slash add the end, this will invalid the URL. For TLS support see Q&A section. SSH is not supported. |
 | scan_interval               | time_period    (Optional)  | Update interval. Defaults to 10 seconds.                              |
 | certpath                    | string         (Optional)  | If TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be `cert.pem` and `key.pem`|
 | containers                  | list           (Optional)  | Array of containers to monitor. Defaults to all containers.           |
