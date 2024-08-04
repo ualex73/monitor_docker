@@ -109,7 +109,7 @@ monitor_docker:
 | Parameter                   | Type                       | Description                                                           |
 | --------------------------- | -------------------------- | --------------------------------------------------------------------- |
 | name                        | string         (Required)  | Client name of Docker daemon. Defaults to `Docker`.                   |
-| url                         | string         (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `tcp://ip:2375`. Do NOT add a slash add the end, this will invalid the URL. For TLS support see Q&A section. SSH is not supported. |
+| url                         | string         (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `http://ip:2375`. Do NOT add a slash add the end, this will invalid the URL. For TLS support see Q&A section. SSH is not supported. |
 | scan_interval               | time_period    (Optional)  | Update interval. Defaults to 10 seconds.                              |
 | certpath                    | string         (Optional)  | If TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be `cert.pem` and `key.pem`|
 | containers                  | list           (Optional)  | Array of containers to monitor. Defaults to all containers.           |
@@ -201,14 +201,14 @@ Here are some possible questions/errors with their answers.
 ```yaml
     monitor_docker:
       - name: Docker
-        url: tcp://<host_ip>:2375
+        url: http://<host_ip>:2375
 ```
 2. **Error:** `Missing valid docker_host.Either DOCKER_HOST or local sockets are not available.`  
     **Answer:** Most likely the socket is not mounted properly in your Home Assistant container. Please check if you added the volume `/var/run/docker.sock`
-3. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via tcp://10.0.0.1:2376...)`.  
+3. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via http://10.0.0.1:2376...)`.  
     **Answer:** You are trying to connect via TCP and most likely the remote address is unavailable. Test it with the command `docker -H tcp://10.0.0.1:2376 ps` if it works (replace `10.0.0.1` with your IP address). Also you can consult the following URL for more help: https://docs.docker.com/config/daemon/remote-access/
 4. **Question:** Is Docker TCP socket via TLS supported?  
-    **Answer:** Yes it is. You need to set the url to e.g. `tcp://ip:2376` and the environment variables `DOCKER_TLS_VERIFY=1` and `DOCKER_CERT_PATH=<path to your certificates>` need to be set  
+    **Answer:** Yes it is. You need to set the url to e.g. `http://ip:2376` and the environment variables `DOCKER_TLS_VERIFY=1` and `DOCKER_CERT_PATH=<path to your certificates>` need to be set  
 The following is a docker-compose example how to set the environment variables and the volume with the certificates:
 ```
 services:
@@ -233,7 +233,7 @@ monitor_docker:
     containers:
     ...
   - name: RemoteDocker
-    url: tcp://10.0.0.1:2376
+    url: http://10.0.0.1:2376
     containers:
     ...
 ```
@@ -245,7 +245,7 @@ monitor_docker:
 8. **Question:** All the reported memory values are 0 (zero), can this be fixed in the integration?  
     **Answer:** No, the integration just uses the available information from the API and you should fix your Docker   
 9. **Question:** Is it possible to monitor HASS.IO?  
-    **Answer:** Yes, please use the Docker Socker Proxy https://github.com/Tecnativa/docker-socket-proxy and configure tcp://ip:port to connect to the proxy. This has been tested and verified by other users, but I cannot give support on it.   
+    **Answer:** Yes, please use the Docker Socker Proxy https://github.com/Tecnativa/docker-socket-proxy and configure http://ip:port to connect to the proxy. This has been tested and verified by other users, but I cannot give support on it.   
 10. **Question:** I get a permission denied error?  
      **Answer:** In general Docker and HASS.IO are running as root and always can connect to /var/run/docker.sock. If you run in a venv environment or directly with Python, you may need to add the "docker" group to the user used for Home Assistant. The following commands may help you, and it is recommended to reboot after "usermod":
   ```
