@@ -2,8 +2,8 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
-NOTE: For Home Assistant 2024.8 and up you need to modify the URL from "tcp://" to "http://" to make it work
-
+NOTE: For Home Assistant 2024.8, which uses aiohttp 3.10.1, they broke most of the monitor_docker functionality. This is reported in the aiohttp https://github.com/aio-libs/aiohttp/issues/8600 ticket. The problem is in the underlying aiohttp, so we cannot fix it. To workaround this, use the URL configuration item and point to a "http://ip:port" of your Docker instance. If you used "tcp://" before, replace it with "http://".
+i
 ## About
 
 This repository contains the Monitor Docker component I developed for monitoring my Docker environment from [Home-Assistant](https://www.home-assistant.io). It is inspired by the Sander Huisman [Docker Monitor](https://github.com/Sanderhuisman/docker_monitor), where I switched mainly from threads to asyncio and put my own wishes/functionality in.  Feel free to use the component and report bugs if you find them. If you want to contribute, please report a bug or pull request and I will reply as soon as possible.
