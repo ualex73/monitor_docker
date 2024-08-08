@@ -2,7 +2,31 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
-**NOTE: Home Assistant 2024.8 broke most of the monitor_docker functionality by using the latest aiohttp 3.10.1. This is reported in https://github.com/aio-libs/aiohttp/issues/8600 ticket. The problem is in the underlying aiohttp, so we cannot fix it. To workaround this (or stay on 2024.7), use the URL configuration item and point to a _http://ip:port_ of your Docker instance. If you used _tcp://_ before, replace it with _http://_.**
+## Home Assistant 2024.8 Problem
+
+Home Assistant 2024.8 broke most of the monitor_docker functionality by using the latest aiohttp 3.10.1. This is reported in https://github.com/aio-libs/aiohttp/issues/8600 ticket. The problem is in the underlying aiohttp, so we cannot fix it. Best to stay for the moment on 2024.7, or apply the workaround as shown below.
+
+1) **When no URL is specified, using the local unix socket (default)**
+
+Solution is to modify docker daemon to listen on a localhost port (my Home Assistant container uses the `host` network), restart docker daemon, then configure the `url` key in monitor_docker config.
+
+https://docs.docker.com/config/daemon/remote-access/
+
+```
+$ cat /etc/docker/daemon.json 
+{
+  "hosts": ["unix:///var/run/docker.sock", "tcp://127.0.0.1:2375"]
+}
+```
+
+configuration.yaml:
+```
+monitor_docker:
+  url: "http://localhost:2375"
+```
+
+2) **When using the URL configuration**
+Change the URL to _http://ip:port_ of your Docker instance. If you used _tcp://_ before, replace it with _http://_.
 
 ## About
 
