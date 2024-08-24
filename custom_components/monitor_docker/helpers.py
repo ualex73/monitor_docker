@@ -925,10 +925,12 @@ class DockerContainerAPI:
             # Compatibility wih older Docker API
             if "online_cpus" in raw["cpu_stats"]:
                 cpu_stats["online_cpus"] = raw["cpu_stats"]["online_cpus"]
-            else:
+            elif "percpu_usage" in raw["cpu_stats"]["cpu_usage"]:
                 cpu_stats["online_cpus"] = len(
                     raw["cpu_stats"]["cpu_usage"]["percpu_usage"] or []
                 )
+            else:
+                cpu_stats["online_cpus"] = 1
 
             # Calculate cpu usage, but first iteration we don't know it
             if self._cpu_old:
@@ -986,20 +988,21 @@ class DockerContainerAPI:
 
             cache = 0
             # https://docs.docker.com/engine/reference/commandline/stats/
-            if self._version1904:
-                # Version is 19.04 or higher, don't use "cache"
-                if "total_inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["total_inactive_file"]
-                elif "inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["inactive_file"]
-            else:
-                # Version is 19.03 and lower, use "cache"
-                if "cache" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["cache"]
-                elif "total_inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["total_inactive_file"]
-                elif "inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["inactive_file"]
+            if "stats" in raw["memory_stats"]:
+                if self._version1904:
+                    # Version is 19.04 or higher, don't use "cache"
+                    if "total_inactive_file" in raw["memory_stats"]["stats"]:
+                        cache = raw["memory_stats"]["stats"]["total_inactive_file"]
+                    elif "inactive_file" in raw["memory_stats"]["stats"]:
+                        cache = raw["memory_stats"]["stats"]["inactive_file"]
+                else:
+                    # Version is 19.03 and lower, use "cache"
+                    if "cache" in raw["memory_stats"]["stats"]:
+                        cache = raw["memory_stats"]["stats"]["cache"]
+                    elif "total_inactive_file" in raw["memory_stats"]["stats"]:
+                        cache = raw["memory_stats"]["stats"]["total_inactive_file"]
+                    elif "inactive_file" in raw["memory_stats"]["stats"]:
+                        cache = raw["memory_stats"]["stats"]["inactive_file"]
 
             memory_stats["usage"] = toMB(
                 raw["memory_stats"]["usage"] - cache,
