@@ -8,7 +8,7 @@ Home Assistant 2024.8.0 is not compatible with monitor_docker, please upgrade to
 
 ## About
 
-This repository contains the Monitor Docker component I developed for monitoring my Docker environment from [Home-Assistant](https://www.home-assistant.io). It is inspired by the Sander Huisman [Docker Monitor](https://github.com/Sanderhuisman/docker_monitor), where I switched mainly from threads to asyncio and put my own wishes/functionality in.  Feel free to use the component and report bugs if you find them. If you want to contribute, please report a bug or pull request and I will reply as soon as possible.
+This repository contains the Monitor Docker component I developed for monitoring my Docker environment from [Home-Assistant](https://www.home-assistant.io). It is inspired by the Sander Huisman [Docker Monitor](https://github.com/Sanderhuisman/docker_monitor), where I switched mainly from threads to asyncio and added my own wishes/functionality. Feel free to use the component and report bugs if you find them. If you want to contribute, please report a bug or pull request, and I will reply as soon as possible.
 
 ## Monitor Docker
 
@@ -32,11 +32,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 ...
 ```
-NOTE: Making `/var/run/docker.sock` read-only has no effect, because it is a socket (and not file).
+NOTE: Making `/var/run/docker.sock` read-only has no effect because it is a socket (not a file).
 
 **Raspberry Pi (Raspbian)**
 
-Using a Raspberry Pi with Raspbian it could happen no memory is reported. In such case the Docker API does not report it to Monitor Docker. Making the following changes, normally fixes the problem:
+Using a Raspberry Pi with Raspbian it could happen no memory is reported. In such case, the Docker API does not report it to Monitor Docker. Making the following changes normally fixes the problem:
 - Open the file `/boot/cmdline.txt`
 - Add the following to the end of the existing line `cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory`
 - Reboot your Raspberry Pi
@@ -45,13 +45,13 @@ NOTE: Add the line to the existing line, do *not* replace it
 
 **Ubuntu / Debian**
 
-Also on Ubuntu/Debian it is possible no memory is shown, the following changes could solve your problem:
+Also on Ubuntu/Debian, no memory may be shown, the following changes could solve your problem:
 - Open the file `/etc/default/grub`
 - Modify the `GRUB_CMDLINE_LINUX_DEFAULT=""` to `GRUB_CMDLINE_LINUX_DEFAULT="quiet cgroup_enable=memory swapaccount=1"`
 - Run `sudo update-grub`
 - Reboot your Ubuntu/Debian
 
-NOTE: This is untested, use at your risk
+NOTE: This is untested, use at your own risk!
 
 ## Installation
 
@@ -65,7 +65,7 @@ NOTE: This is untested, use at your risk
 
 ### Manual
 - Copy directory `custom_components/monitor_docker` to your `<config dir>/custom_components` directory.
-- Configure with config below.
+- Configure with the config below.
 - If applicable, add the volume `/var/run/docker.sock` to your Home Assistant container.
 - Restart Home-Assistant.
 
@@ -113,14 +113,14 @@ monitor_docker:
 | Parameter                   | Type                       | Description                                                           |
 | --------------------------- | -------------------------- | --------------------------------------------------------------------- |
 | name                        | string         (Required)  | Client name of Docker daemon. Defaults to `Docker`.                   |
-| url                         | string         (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `http://ip:2375`. Do NOT add a slash add the end, this will invalid the URL. For TLS support see Q&A section. SSH is not supported. |
+| url                         | string         (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `http://ip:2375`. Do NOT add a slash add the end, this will invalidate the URL. For TLS support see the Q&A section. SSH is not supported. |
 | scan_interval               | time_period    (Optional)  | Update interval. Defaults to 10 seconds.                              |
-| certpath                    | string         (Optional)  | If TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be `cert.pem` and `key.pem`|
+| certpath                    | string         (Optional)  | If a TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be `cert.pem` and `key.pem`|
 | containers                  | list           (Optional)  | Array of containers to monitor. Defaults to all containers.           |
 | containers_exclude          | list           (Optional)  | Array of containers to be excluded from monitoring, when all containers are included. |
 | monitored_conditions        | list           (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
-| rename                      | dictionary     (Optional)  | Dictionary of containers to rename. Renaming is done on the name in HA Lovelove, not the entity name (see `rename_entity`). Default no renaming. |
-| rename_entity               | boolean        (Optional)  | If rename is enabled, it changes the name in HA Loveloce, not the entity name. Enable this setting to also rename the entitu name (Default: False) |
+| rename                      | dictionary     (Optional)  | Dictionary of containers to rename. Renaming is done on the name in HA Lovelace, not the entity name (see `rename_entity`). Default no renaming. |
+| rename_entity               | boolean        (Optional)  | If rename is enabled, it changes the name in HA Lovelace, not the entity name. Enable this setting to also rename the entity name (Default: False) |
 | sensorname                  | string         (Optional)  | Sensor string to format the name used in Home Assistant. Defaults to `{name} {sensor}`, where `{name}` is the container name and `{sensor}` is e.g. Memory, Status, Network speed Up |
 | switchname                  | string         (Optional)  | Switch string to format the name used in Home Assistant. Defaults to `{name}`, where `{name}` is the container name. |
 | switchenabled               | boolean / list (Optional)  | Enable/Disable the switch entity for containers (Default: `True` Enabled switch for all containers, `False`: Disabled switch for all containers). Or specify a list of containers for which to enable switch entities. |
@@ -212,8 +212,8 @@ Here are some possible questions/errors with their answers.
 3. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via http://10.0.0.1:2376...)`.  
     **Answer:** You are trying to connect via TCP and most likely the remote address is unavailable. Test it with the command `docker -H tcp://10.0.0.1:2376 ps` if it works (replace `10.0.0.1` with your IP address). Also you can consult the following URL for more help: https://docs.docker.com/config/daemon/remote-access/
 4. **Question:** Is Docker TCP socket via TLS supported?  
-    **Answer:** Yes it is. You need to set the url to e.g. `http://ip:2376` and the environment variables `DOCKER_TLS_VERIFY=1` and `DOCKER_CERT_PATH=<path to your certificates>` need to be set  
-The following is a docker-compose example how to set the environment variables and the volume with the certificates:
+    **Answer:** Yes it is. You need to set the URL to e.g. `http://ip:2376` and the environment variables `DOCKER_TLS_VERIFY=1` and `DOCKER_CERT_PATH=<path to your certificates>` need to be set  
+The following is a docker-compose example of how to set the environment variables and the volume with the certificates:
 ```
 services:
   hass:
@@ -242,7 +242,7 @@ monitor_docker:
     ...
 ```
 *NOTE*: The integration supports multiple Docker instances, but you can only define 1 TLS configuration which is applied to all (thus you cannot mix TCP with and without TLS).  
-6. **Question:** Can create, delete or re-create of a container be implemented in the integration?  
+6. **Question:** Can create, delete or re-create a container be implemented in the integration?  
     **Answer:** The used Docker library has no easy (and safe) way to handle such functionality. Please use *docker-compose* to handle such operations. If anybody can make this fully work in a safe way, I'll be happy to merge the PR   
 7. **Question:** Can you add more security to a switch?  
     **Answer:** No, this isn't possible from the integration. You need to do this directly in Lovelace itself, within the card e.g. https://github.com/iantrich/restriction-card  
@@ -260,8 +260,8 @@ monitor_docker:
      **Answer:** Such feature goes outside of the scope of monitor_docker and there are few other options available for this. You can use https://newreleases.io or https://github.com/crazy-max/diun/    
 12. **Question:** Is Docker via SSH supported?  
      **Answer:** No, the Docker library used, does not support it. There is a small _but_, maybe you can get it to work via `socat`. The following URL may help you: https://serverfault.com/questions/127794/forward-local-port-or-socket-file-to-remote-socket-file/362833#362833
-13. **Question:** Can the sensors have an unique entity identifiers? This is useful for renaming it in the HA GUI  
-     **Answer:** This is not possible, due to the nature how this integration works. The docker name needs to be consistent across restart and recreate, this can be only doing by overruling the entity identifier as it is working now  
+13. **Question:** Can the sensors have unique entity identifiers? This is useful for renaming it in the HA GUI  
+     **Answer:** This is not possible, due to the nature of how this integration works. The docker name needs to be consistent across restart and recreate, this can be only done by overruling the entity identifier as it is working now  
 
 ## Credits
 
