@@ -5,6 +5,6 @@
   "documentation": "https://github.com/ualex73/monitor_docker",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/ualex73/monitor_docker/issues",
-  "requirements": ["aiodocker==0.22.0", "python-dateutil==2.9.0"],
-  "version": "1.18"
+  "requirements": ["aiodocker==0.24.0", "python-dateutil==2.9.0.post0"],
+  "version": "1.20b0"
 }

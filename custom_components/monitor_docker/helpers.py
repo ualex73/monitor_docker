@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 
 import aiodocker
+from aiohttp import ClientSession, ClientTimeout, TCPConnector
 import homeassistant.util.dt as dt_util
 from dateutil import parser, relativedelta
 from homeassistant.const import (
@@ -35,6 +36,7 @@ from .const import (
     CONF_PRECISION_MEMORY_PERCENTAGE,
     CONF_PRECISION_NETWORK_KB,
     CONF_PRECISION_NETWORK_MB,
+    CONF_RETRY,
     CONTAINER,
     CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_IMAGE,
@@ -96,14 +98,21 @@ class DockerAPI:
         self._event_destroy: dict[str, int] = {}
         self._dockerStopped = False
         self._subscribers: list[Callable] = []
-        self._version1904 = None
         self._api: aiodocker.Docker = None
 
         _LOGGER.debug("[%s]: Helper version: %s", self._instance, VERSION)
 
         self._interval: int = config[CONF_SCAN_INTERVAL].seconds
+        self._retry_interval: int = config[CONF_RETRY]
+        _LOGGER.debug(
+            "[%s] CONF_SCAN_INTERVAL=%d, RETRY=%", self._interval, self._retry_interval
+        )
 
     async def init(self, startCount=0):
+
+        # Set to None when called twice, etc
+        self._api = None
+
         try:
             # Try to fix unix:// to unix:/// (3 are required by aiodocker)
             url: str = self._config[CONF_URL]
@@ -159,37 +168,33 @@ class DockerAPI:
                         os.environ["DOCKER_TLS_VERIFY"] = "1"
                         os.environ["DOCKER_CERT_PATH"] = self._config[CONF_CERTPATH]
 
-            self._api = aiodocker.Docker(url=url)
+            # Create a new connector with 5 seconds timeout, otherwise it can be very long
+            connector = TCPConnector()
+            session = ClientSession(
+                connector=connector,
+                timeout=ClientTimeout(
+                    connect=5,
+                    sock_connect=5,
+                    total=10,
+                ),
+            )
+
+            self._api = aiodocker.Docker(url=url, connector=connector, session=session)
         except Exception as err:
+            exc_info = True if str(err) == "" else False
             _LOGGER.error(
                 "[%s]: Can not connect to Docker API (%s)",
                 self._instance,
                 str(err),
-                exc_info=True,
+                exc_info=exc_info,
             )
             return
 
         versionInfo = await self._api.version()
         version: str | None = versionInfo.get("Version", None)
 
-        # Compare version with 19.03 when memory calculation has changed
-        if version is not None:
-            try:
-                if tuple(map(int, (version.split(".")[0:2]))) > tuple(
-                    map(int, ("19.03".split(".")))
-                ):
-                    self._version1904 = True
-                else:
-                    self._version1904 = False
-            except ValueError as err:
-                _LOGGER.error(
-                    "[%s]: ValueError in version '%s' ", self._instance, version
-                )
-                self._version1904 = True
-
-        _LOGGER.debug(
-            "[%s]: Docker version: %s (%s)", self._instance, version, self._version1904
-        )
+        # Pre 19.03 support memory calculation is dropped
+        _LOGGER.debug("[%s]: Docker version: %s", self._instance, version)
 
         # Start task to monitor events of create/delete/start/stop
         self._tasks["events"] = asyncio.create_task(self._run_docker_events())
@@ -213,7 +218,6 @@ class DockerAPI:
                 self._config,
                 self._api,
                 cname,
-                version1904=self._version1904,
             )
             await self._containers[cname].init()
 
@@ -233,6 +237,26 @@ class DockerAPI:
         """Stop the monitor thread."""
 
         _LOGGER.info("[%s]: Stopping Monitor Docker thread", self._instance)
+
+    #############################################################
+    async def _reconnectx(self):
+
+        while True:
+            _LOGGER.debug("[%s] Reconnecting", self._instance)
+
+            try:
+                await self.init()
+                break
+            except Exception as err:
+                _LOGGER.error(
+                    "[%s] Failed Docker connect (%s). Retry in %d seconds",
+                    self._instance,
+                    str(err),
+                    self._retry_interval,
+                )
+                await asyncio.sleep(self._retry_interval)
+
+        _LOGGER.debug("[%s] Reconnect success", self._instance)
 
     #############################################################
     def remove_entities(self) -> None:
@@ -266,6 +290,17 @@ class DockerAPI:
             while True:
                 event: dict = await subscriber.get()
 
+                # Dump all raw events
+                if event is None:
+                    _LOGGER.debug("[%s] run_docker_events RAW: None", self._instance)
+                else:
+                    _LOGGER.debug(
+                        "[%s] run_docker_events Type=%s, Action=%s",
+                        self._instance,
+                        event["Type"],
+                        event["Action"],
+                    )
+
                 # When we receive none, the connection normally is broken
                 if event is None:
                     _LOGGER.error("[%s]: run_docker_events loop ended", self._instance)
@@ -281,15 +316,20 @@ class DockerAPI:
                         try:
                             await self._container_remove(cname)
                         except Exception as err:
+                            exc_info = True if str(err) == "" else False
                             _LOGGER.error(
                                 "[%s]: Stopping gave an error %s",
                                 self._instance,
                                 str(err),
-                                exc_info=True,
+                                exc_info=exc_info,
                             )
 
                     # Stop everything and return to the main thread
                     self._monitor_stop(self._config[CONF_NAME])
+
+                    # TODO: improve reconnectx
+                    await self._reconnectx()
+
                     break
 
                 # Only monitor container events
@@ -426,8 +466,12 @@ class DockerAPI:
                             )
 
         except Exception as err:
+            exc_info = True if str(err) == "" else False
             _LOGGER.error(
-                "[%s]: run_docker_events (%s)", self._instance, str(err), exc_info=True
+                "[%s]: run_docker_events (%s)",
+                self._instance,
+                str(err),
+                exc_info=exc_info,
             )
 
     #############################################################
@@ -455,11 +499,12 @@ class DockerAPI:
                 await asyncio.sleep(1)
 
         except Exception as err:
+            exc_info = True if str(err) == "" else False
             _LOGGER.error(
                 "[%s]: container_create_destroy (%s)",
                 self._instance,
                 str(err),
-                exc_info=True,
+                exc_info=exc_info,
             )
 
     #############################################################
@@ -472,7 +517,7 @@ class DockerAPI:
 
         # Create our Docker Container API
         self._containers[cname] = DockerContainerAPI(
-            self._config, self._api, cname, atInit=False, version1904=self._version1904
+            self._config, self._api, cname, atInit=False
         )
 
         # We should wait until container is attached
@@ -511,9 +556,13 @@ class DockerAPI:
         """Function to retrieve information like docker info."""
 
         loopInit = False
+        self._dockerStopped = False
 
-        try:
-            while True:
+        while True:
+
+            error = True
+
+            try:
                 if self._dockerStopped:
                     _LOGGER.debug("[%s]: Stopping docker info thread", self._instance)
                     break
@@ -557,11 +606,12 @@ class DockerAPI:
                                     CONTAINER_STATS_MEMORY
                                 )
                     except Exception as err:
+                        exc_info = True if str(err) == "" else False
                         _LOGGER.error(
                             "[%s]: run_docker_info memory/cpu of X (%s)",
                             self._instance,
                             str(err),
-                            exc_info=True,
+                            exc_info=exc_info,
                         )
 
                 # Calculate memory percentage
@@ -659,15 +709,28 @@ class DockerAPI:
                 )
 
                 loopInit = True
-                await asyncio.sleep(self._interval)
+                error = False
 
-        except Exception as err:
-            _LOGGER.error(
-                "[%s]: run_docker_info (%s)",
-                self._instance,
-                str(err),
-                exc_info=True,
-            )
+            except asyncio.TimeoutError as err:
+                _LOGGER.error(
+                    "[%s]: run_docker_info (%s) TCP Timeout. Retry in %d seconds",
+                    self._instance,
+                    self._retry_interval,
+                )
+            except Exception as err:
+                exc_info = True if str(err) == "" else False
+                _LOGGER.error(
+                    "[%s]: run_docker_info (%s). Retry in %d seconds",
+                    self._instance,
+                    str(err),
+                    self._retry_interval,
+                    exc_info=exc_info,
+                )
+
+            if error:
+                await asyncio.sleep(self._retry_interval)
+            else:
+                await asyncio.sleep(self._interval)
 
     #############################################################
     def list_containers(self):
@@ -698,15 +761,14 @@ class DockerContainerAPI:
         api: aiodocker.Docker,
         cname: str,
         atInit=True,
-        version1904: bool | None = None,
     ):
         self._config = config
         self._api = api
-        self._version1904 = version1904
         self._instance: str = config[CONF_NAME]
         self._memChange: int = config[CONF_MEMORYCHANGE]
         self._name = cname
         self._interval: int = config[CONF_SCAN_INTERVAL].seconds
+        self._retry_interval: int = config[CONF_RETRY]
         self._busy = False
         self._atInit = atInit
         self._task: asyncio.Task | None = None
@@ -732,12 +794,13 @@ class DockerContainerAPI:
             try:
                 self._container = await self._api.containers.get(self._name)
             except Exception as err:
+                exc_info = True if str(err) == "" else False
                 _LOGGER.error(
                     "[%s] %s: Container not available anymore (1) (%s)",
                     self._instance,
                     self._name,
                     str(err),
-                    exc_info=True,
+                    exc_info=exc_info,
                 )
                 return
 
@@ -760,12 +823,13 @@ class DockerContainerAPI:
             )
             return False
         except Exception as err:
+            exc_info = True if str(err) == "" else False
             _LOGGER.error(
                 "[%s] %s: Container not available anymore (2b) (%s)",
                 self._instance,
                 self._name,
                 str(err),
-                exc_info=True,
+                exc_info=exc_info,
             )
             return False
 
@@ -778,6 +842,10 @@ class DockerContainerAPI:
         """Loop to gather container info/stats."""
 
         while True:
+
+            sendNotify = True
+            error = True
+
             try:
                 # Don't check container if we are doing a start/stop
                 if not self._busy:
@@ -786,14 +854,16 @@ class DockerContainerAPI:
                     # Only run stats if container is running
                     if self._info[CONTAINER_INFO_STATE] in ("running", "paused"):
                         await self._run_container_stats()
-
-                    self._notify()
                 else:
                     _LOGGER.debug(
                         "[%s] %s: Waiting on stop/start of container",
                         self._instance,
                         self._name,
                     )
+                    sendNotify = False
+
+                # No error, so normal interval
+                error = False
 
             except concurrent.futures._base.CancelledError:
                 _LOGGER.debug(
@@ -805,22 +875,48 @@ class DockerContainerAPI:
                 break
             except aiodocker.exceptions.DockerError as err:
                 _LOGGER.error(
-                    "[%s] %s: Container not available anymore (3a) (%s)",
+                    "[%s] %s: Container not available anymore (3a) (%s). Retry in %d seconds",
                     self._instance,
                     self._name,
                     str(err),
+                    self._retry_interval,
+                )
+            except asyncio.exceptions.CancelledError as err:
+                _LOGGER.error(
+                    "[%s] %s: Container not available anymore (3c) CancelledError. Retry in %d seconds",
+                    self._instance,
+                    self._name,
+                    self._retry_interval,
+                )
+            except asyncio.TimeoutError as err:
+                _LOGGER.error(
+                    "[%s] %s: Container not available anymore (3d) TimeoutError. Retry in %d seconds",
+                    self._instance,
+                    self._name,
+                    self._retry_interval,
                 )
             except Exception as err:
+                exc_info = True if str(err) == "" else False
                 _LOGGER.error(
-                    "[%s] %s: Container not available anymore (3b) (%s)",
+                    "[%s] %s: Container not available anymore (3b) (%s). Retry in %d seconds",
                     self._instance,
                     self._name,
                     str(err),
-                    exc_info=True,
+                    self._retry_interval,
+                    exc_info=exc_info,
                 )
 
+            # Send values to sensors/switch
+            if sendNotify:
+                self._notify()
+
+            # TODO: on error, increase sleep
+
             # Sleep in normal and exception situation
-            await asyncio.sleep(self._interval)
+            if error:
+                await asyncio.sleep(self._retry_interval)
+            else:
+                await asyncio.sleep(self._interval)
 
     #############################################################
     async def _run_container_info(self) -> None:
@@ -986,20 +1082,11 @@ class DockerContainerAPI:
 
             cache = 0
             # https://docs.docker.com/engine/reference/commandline/stats/
-            if self._version1904:
-                # Version is 19.04 or higher, don't use "cache"
-                if "total_inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["total_inactive_file"]
-                elif "inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["inactive_file"]
-            else:
-                # Version is 19.03 and lower, use "cache"
-                if "cache" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["cache"]
-                elif "total_inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["total_inactive_file"]
-                elif "inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["inactive_file"]
+            # Version is 19.04 or higher, don't use "cache"
+            if "total_inactive_file" in raw["memory_stats"]["stats"]:
+                cache = raw["memory_stats"]["stats"]["total_inactive_file"]
+            elif "inactive_file" in raw["memory_stats"]["stats"]:
+                cache = raw["memory_stats"]["stats"]["inactive_file"]
 
             memory_stats["usage"] = toMB(
                 raw["memory_stats"]["usage"] - cache,
