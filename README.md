@@ -2,7 +2,9 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
-NOTE: For Home Assistant 2024.8 and up you need to modify the URL from "tcp://" to "http://" to make it work
+## Home Assistant 2024.8.0
+
+Home Assistant 2024.8.0 is not compatible with monitor_docker, please upgrade to Home Assistant 2024.8.1
 
 ## About
 
