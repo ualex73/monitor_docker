@@ -127,12 +127,19 @@ class DockerAPI:
             if startCount > 0 and url is not None and url.find("unix:") != 0:
                 await asyncio.sleep(5)
 
+            # Check if it is a tcp connection or not
+            tcpConnection = False
+
             # Do some debugging logging for TCP/TLS
             if url is not None:
                 _LOGGER.debug("%s: Docker URL is '%s'", self._instance, url)
 
                 # Check for TLS if it is not unix
                 if url.find("tcp:") == 0 or url.find("http:") == 0:
+
+                    # Set this to true, api needs to called different
+                    tcpConnection = True
+
                     tlsverify = os.environ.get("DOCKER_TLS_VERIFY", None)
                     certpath = os.environ.get("DOCKER_CERT_PATH", None)
                     if tlsverify is None:
@@ -169,17 +176,22 @@ class DockerAPI:
                         os.environ["DOCKER_CERT_PATH"] = self._config[CONF_CERTPATH]
 
             # Create a new connector with 5 seconds timeout, otherwise it can be very long
-            connector = TCPConnector()
-            session = ClientSession(
-                connector=connector,
-                timeout=ClientTimeout(
-                    connect=5,
-                    sock_connect=5,
-                    total=10,
-                ),
-            )
+            if tcpConnection:
+                connector = TCPConnector()
+                session = ClientSession(
+                    connector=connector,
+                    timeout=ClientTimeout(
+                        connect=5,
+                        sock_connect=5,
+                        total=10,
+                    ),
+                )
+                self._api = aiodocker.Docker(
+                    url=url, connector=connector, session=session
+                )
+            else:
+                self._api = aiodocker.Docker(url=url)
 
-            self._api = aiodocker.Docker(url=url, connector=connector, session=session)
         except Exception as err:
             exc_info = True if str(err) == "" else False
             _LOGGER.error(
