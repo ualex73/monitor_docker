@@ -6,7 +6,11 @@ import re
 from typing import Any
 
 import voluptuous as vol
-from custom_components.monitor_docker.helpers import DockerAPI, DockerContainerAPI
+from custom_components.monitor_docker.helpers import (
+    DockerAPI,
+    DockerContainerAPI,
+    DockerContainerEntity,
+)
 from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
@@ -167,7 +171,7 @@ async def async_setup_platform(
 
 
 #################################################################
-class DockerContainerSwitch(SwitchEntity):
+class DockerContainerSwitch(SwitchEntity, DockerContainerEntity):
     def __init__(
         self,
         container: DockerContainerAPI,
@@ -178,6 +182,8 @@ class DockerContainerSwitch(SwitchEntity):
         alias_name: str,
         name_format: str,
     ):
+        super().__init__(container, alias_name)
+
         self._container = container
         self._instance = instance
         self._prefix = prefix

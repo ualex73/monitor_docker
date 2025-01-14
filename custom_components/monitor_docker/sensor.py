@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import CONF_MONITORED_CONDITIONS, CONF_NAME
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import slugify
@@ -46,7 +47,7 @@ from .const import (
     DOCKER_MONITOR_LIST,
     DOMAIN,
 )
-from .helpers import DockerAPI, DockerContainerAPI
+from .helpers import DockerAPI, DockerContainerAPI, DockerContainerEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -166,7 +167,6 @@ async def async_setup_platform(
                             and variable not in CONTAINER_MONITOR_NETWORK_LIST
                         )
                     ):
-
                         # Only force rename of entityid is requested, to not break backwards compatibility
                         alias_entityid = cname
                         if config[CONF_RENAME_ENITITY]:
@@ -225,6 +225,17 @@ class DockerSensor(SensorEntity):
         self._state = None
         self._attributes: dict[str, Any] = {}
         self._removed = False
+
+        api_info = self._api.get_info()
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, self._api.get_url())},
+            name=self._instance,
+            model=api_info.get(ATTR_VERSION_OS),
+            manufacturer="Docker",
+            model_id=api_info.get(ATTR_VERSION_KERNEL),
+            sw_version=api_info.get(DOCKER_INFO_VERSION),
+            entry_type=DeviceEntryType.SERVICE,
+        )
 
         _LOGGER.info(
             "[%s]: Initializing Docker sensor '%s'",
@@ -285,7 +296,7 @@ class DockerSensor(SensorEntity):
 
 
 #################################################################
-class DockerContainerSensor(SensorEntity):
+class DockerContainerSensor(SensorEntity, DockerContainerEntity):
     """Representation of a Docker Sensor."""
 
     def __init__(
@@ -301,6 +312,7 @@ class DockerContainerSensor(SensorEntity):
         condition_list: list | None = None,
     ):
         """Initialize the sensor."""
+        super().__init__(container, alias_name)
 
         self._instance = instance
         self._container = container
