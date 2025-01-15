@@ -14,6 +14,7 @@ from homeassistant.const import (
     CONF_URL,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.reload import async_setup_reload_service
 
@@ -56,7 +57,7 @@ DEFAULT_SCAN_INTERVAL = timedelta(seconds=10)
 
 DOCKER_SCHEMA = vol.Schema(
     {
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+        vol.Required(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_PREFIX, default=""): cv.string,
         vol.Optional(CONF_URL, default=None): vol.Any(cv.string, None),
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
@@ -94,13 +95,17 @@ CONFIG_SCHEMA = vol.Schema(
     {DOMAIN: vol.All(cv.ensure_list, [vol.Any(DOCKER_SCHEMA)])}, extra=vol.ALLOW_EXTRA
 )
 
+class ConnectionFailed(HomeAssistantError):
+    """Error to indicate there is invalid connection."""
+
+
 #################################################################
-async def _run_docker(hass: HomeAssistant, entry: ConfigType) -> None:
+async def _run_docker(hass: HomeAssistant, entry: ConfigType, conf_id: str) -> None:
     """Wrapper around function for a separated thread."""
 
     # Create docker instance, it will have asyncio threads
-    hass.data[DOMAIN][entry[CONF_NAME]] = {}
-    hass.data[DOMAIN][entry[CONF_NAME]][CONFIG] = entry
+    hass.data[DOMAIN][conf_id] = {}
+    hass.data[DOMAIN][conf_id][CONFIG] = entry
 
     startCount = 0
 
@@ -108,8 +113,8 @@ async def _run_docker(hass: HomeAssistant, entry: ConfigType) -> None:
         doLoop = True
 
         try:
-            hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(hass, entry)
-            await hass.data[DOMAIN][entry[CONF_NAME]][API].init(startCount)
+            hass.data[DOMAIN][conf_id][API] = DockerAPI(hass, entry)
+            await hass.data[DOMAIN][conf_id][API].init(startCount)
         except Exception as err:
             doLoop = False
             if entry[CONF_RETRY] == 0:
@@ -126,7 +131,7 @@ async def _run_docker(hass: HomeAssistant, entry: ConfigType) -> None:
             # loop.run_forever()
 
             # We only get here if a docker instance disconnected or HASS is stopping
-            if not hass.data[DOMAIN][entry[CONF_NAME]][API]._dockerStopped:
+            if not hass.data[DOMAIN][conf_id][API]._dockerStopped:
                 # If HASS stopped, do not retry
                 break
 
@@ -169,7 +174,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             return False
 
         # Each docker hosts runs in its own thread. We need to pass hass too, for the load_platform
-        asyncio.create_task(_run_docker(hass, entry))
+        asyncio.create_task(_run_docker(hass, entry, entry[CONF_NAME]))
 
     return True
 
@@ -206,7 +211,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         return False
 
     # Each docker hosts runs in its own thread. We need to pass hass too, for the load_platform
-    asyncio.create_task(_run_docker(hass, config_entry))
+    asyncio.create_task(_run_docker(hass, config_entry.data, config_entry.entry_id))
 
     return True
 

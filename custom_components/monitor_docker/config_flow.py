@@ -13,7 +13,7 @@ from homeassistant.const import CONF_API_KEY
 from homeassistant.data_entry_flow import FlowResult
 import homeassistant.helpers.config_validation as cv
 
-from . import DOMAIN, InvalidAuth
+from . import DOMAIN, DOCKER_SCHEMA, ConnectionFailed
 from .helpers import DockerAPI, DockerContainerAPI
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,8 +46,8 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             try:
                 await self.is_valid(user_input)
-            except InvalidAuth:
-                errors["base"] = "invalid_auth"
+            except ConnectionFailed:
+                errors["base"] = "invalid_connection"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unhandled exception in user step")
                 errors["base"] = "unknown"
@@ -66,70 +66,32 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             for key in defaults:
                 defaults[key] = self._reauth_entry.data.get(key)
 
-        user_schema = vol.Schema(
-            {
-                vol.Required(CONF_API_KEY, default=None): cv.string,
-            }
-        )
+        # user_schema = vol.Schema(
+        #     {
+        #         vol.Required(CONF_API_KEY, default=None): cv.string,
+        #     }
+        # )
         return self.async_show_form(
             step_id="user",
-            data_schema=user_schema,
-            description_placeholders=PLACEHOLDERS,
+            data_schema=DOCKER_SCHEMA,
+            # data_schema=user_schema,
+            # description_placeholders=PLACEHOLDERS,
             errors=errors,
         )
 
-    async def async_step_reconfigure(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle user reconfiguration step."""
-        errors = {}
+    # async def async_step_import(self, import_data) -> FlowResult:
+    #     """Import config from configuration.yaml."""
+    #     return await self.async_step_user(import_data)
 
-        config_entry = self.hass.config_entries.async_get_entry(
-            self.context["entry_id"]
-        )
-        if config_entry is None:
-            return self.async_abort(reason="reconfigure_failed")
+    # async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
+    #     """Perform reauth upon an API authentication error."""
+    #     self._reauth_entry = self.hass.config_entries.async_get_entry(
+    #         self.context["entry_id"]
+    #     )
+    #     return await self.async_step_user()
 
-        if user_input is not None:
-            try:
-                await self.is_valid(user_input)
-            except InvalidAuth:
-                errors["base"] = "invalid_auth"
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unhandled exception in user step")
-                errors["base"] = "unknown"
-            if not errors:
-                return self.async_update_reload_and_abort(
-                    config_entry,
-                    data=user_input,
-                )
-
-        default_api_key = config_entry.data.get(CONF_API_KEY) or None
-        user_schema = vol.Schema(
-            {
-                vol.Required(CONF_API_KEY, default=default_api_key): cv.string,
-            }
-        )
-        return self.async_show_form(
-            step_id="reconfigure",
-            data_schema=user_schema,
-            description_placeholders=PLACEHOLDERS,
-            errors=errors,
-        )
-
-    async def async_step_import(self, import_data) -> FlowResult:
-        """Import config from configuration.yaml."""
-        return await self.async_step_user(import_data)
-
-    async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
-        """Perform reauth upon an API authentication error."""
-        self._reauth_entry = self.hass.config_entries.async_get_entry(
-            self.context["entry_id"]
-        )
-        return await self.async_step_user()
-
-    # async def is_valid(self, user_input):
-    #     """Check for user input errors."""
-    #     docker_api = DockerApi(user_input[CONF_API_KEY])
-    #     if not await docker_api.test():
-    #         raise InvalidAuth
+    async def is_valid(self, user_input):
+        """Check for user input errors."""
+        docker_api = DockerAPI(self.hass, user_input.data)
+        if not await docker_api.init():
+            raise ConnectionFailed
