@@ -6,15 +6,15 @@ from collections.abc import Mapping
 import logging
 from typing import Any
 
-import voluptuous as vol
+# import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY
 from homeassistant.data_entry_flow import FlowResult
-import homeassistant.helpers.config_validation as cv
+# import homeassistant.helpers.config_validation as cv
 
 from . import DOMAIN, DOCKER_SCHEMA, ConnectionFailed
-from .helpers import DockerAPI, DockerContainerAPI
+from .helpers import DockerAPI
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,9 +34,9 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Handle user step."""
         errors = {}
-        defaults = {
-            CONF_API_KEY: "",
-        }
+        # defaults = {
+        #     CONF_API_KEY: "",
+        # }
 
         if user_input is not None:
             await self.async_set_unique_id(user_input[CONF_API_KEY])
@@ -62,9 +62,9 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return self.async_abort(reason="reauth_successful")
 
                 return self.async_create_entry(title="Docker", data=user_input)
-        elif self._reauth_entry:
-            for key in defaults:
-                defaults[key] = self._reauth_entry.data.get(key)
+        # elif self._reauth_entry:
+        #     for key in defaults:
+        #         defaults[key] = self._reauth_entry.data.get(key)
 
         # user_schema = vol.Schema(
         #     {
