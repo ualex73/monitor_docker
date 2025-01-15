@@ -4,7 +4,9 @@ import asyncio
 import concurrent
 import logging
 import os
+import ssl
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable
 
 import aiodocker
@@ -66,7 +68,7 @@ from .const import (
     PRECISION,
 )
 
-VERSION = "1.19"
+VERSION = "1.20b2"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -130,54 +132,68 @@ class DockerAPI:
             # Check if it is a tcp connection or not
             tcpConnection = False
 
-            # Do some debugging logging for TCP/TLS
+            # Remove Docker environment variables
+            os.environ.pop("DOCKER_TLS_VERIFY", None)
+            os.environ.pop("DOCKER_CERT_PATH", None)
+
+            # Setup Docker parameters
+            connector = None
+            session = None
+            ssl_context = None
+
             if url is not None:
                 _LOGGER.debug("%s: Docker URL is '%s'", self._instance, url)
+            else:
+                _LOGGER.debug(
+                    "%s: Docker URL is auto-detect (most likely using 'unix://var/run/docker.socket')",
+                    self._instance,
+                )
 
-                # Check for TLS if it is not unix
-                if url.find("tcp:") == 0 or url.find("http:") == 0:
+            # If is not empty or an Unix socket, then do check TCP/SSL
+            if url is not None and url.find("unix:") == -1:
 
-                    # Set this to true, api needs to called different
-                    tcpConnection = True
+                # Check if URL is valid
+                if not (
+                    url.find("tcp:") == 0
+                    or url.find("http:") == 0
+                    or url.find("https:") == 0
+                ):
+                    raise ValueError(
+                        f"[{self._instance}] Docker URL '{url}' does not start with tcp:, http: or https:"
+                    )
 
-                    tlsverify = os.environ.get("DOCKER_TLS_VERIFY", None)
-                    certpath = os.environ.get("DOCKER_CERT_PATH", None)
-                    if tlsverify is None:
-                        _LOGGER.debug(
-                            "[%s]: Docker environment 'DOCKER_TLS_VERIFY' is NOT set",
-                            self._instance,
-                        )
-                    else:
-                        _LOGGER.debug(
-                            "[%s]: Docker environment set 'DOCKER_TLS_VERIFY=%s'",
-                            self._instance,
-                            tlsverify,
-                        )
+                if self._config[CONF_CERTPATH] and url.find("http:") == 0:
+                    # fixup URL and warn
+                    _LOGGER.warning(
+                        "[%s] Docker URL '%s' should be https instead of http when using certificate path",
+                        self._instance,
+                        url,
+                    )
+                    url = url.replace("http:", "https:")
 
-                    if certpath is None:
-                        _LOGGER.debug(
-                            "[%s]: Docker environment 'DOCKER_CERT_PATH' is NOT set",
-                            self._instance,
-                        )
-                    else:
-                        _LOGGER.debug(
-                            "[%s]: Docker environment set 'DOCKER_CERT_PATH=%s'",
-                            self._instance,
-                            certpath,
-                        )
+                if self._config[CONF_CERTPATH] and url.find("tcp:") == 0:
+                    # fixup URL and warn
+                    _LOGGER.warning(
+                        "[%s] Docker URL '%s' should be https instead of tcp when using certificate path",
+                        self._instance,
+                        url,
+                    )
+                    url = url.replace("tcp:", "https:")
 
-                    if self._config[CONF_CERTPATH]:
-                        _LOGGER.debug(
-                            "[%s]: Docker CertPath set '%s', setting environment variables DOCKER_TLS_VERIFY/DOCKER_CERT_PATH",
-                            self._instance,
-                            self._config[CONF_CERTPATH],
-                        )
-                        os.environ["DOCKER_TLS_VERIFY"] = "1"
-                        os.environ["DOCKER_CERT_PATH"] = self._config[CONF_CERTPATH]
+                if self._config[CONF_CERTPATH]:
+                    _LOGGER.debug(
+                        "[%s]: Docker certification path is '%s' SSL/TLS will be used",
+                        self._instance,
+                        self._config[CONF_CERTPATH],
+                    )
 
-            # Create a new connector with 5 seconds timeout, otherwise it can be very long
-            if tcpConnection:
-                connector = TCPConnector()
+                    # Create our SSL context object
+                    ssl_context = await self._hass.async_add_executor_job(
+                        self._docker_ssl_context
+                    )
+
+                # Setup new TCP connection, otherwise timeout takes toooo long
+                connector = TCPConnector(ssl=ssl_context)
                 session = ClientSession(
                     connector=connector,
                     timeout=ClientTimeout(
@@ -186,11 +202,11 @@ class DockerAPI:
                         total=10,
                     ),
                 )
-                self._api = aiodocker.Docker(
-                    url=url, connector=connector, session=session
-                )
-            else:
-                self._api = aiodocker.Docker(url=url)
+
+            # Initiate the aiodocker instance now
+            self._api = aiodocker.Docker(
+                url=url, connector=connector, session=session, ssl_context=ssl_context
+            )
 
         except Exception as err:
             exc_info = True if str(err) == "" else False
@@ -243,6 +259,27 @@ class DockerAPI:
                 {CONF_NAME: self._instance},
                 self._config,
             )
+
+    #############################################################
+    def _docker_ssl_context(self) -> ssl.SSLContext | None:
+        """
+        Create a SSLContext object
+        """
+
+        context = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH)
+        context.set_ciphers(ssl._RESTRICTED_SERVER_CIPHERS)  # type: ignore
+
+        path2 = Path(self._config[CONF_CERTPATH])
+
+        context.load_verify_locations(cafile=str(path2 / "ca.pem"))
+        context.load_cert_chain(
+            certfile=str(path2 / "cert.pem"), keyfile=str(path2 / "key.pem")
+        )
+
+        context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        context.check_hostname = False
+
+        return context
 
     #############################################################
     def _monitor_stop(self, _service_or_event: Event) -> None:
@@ -306,10 +343,19 @@ class DockerAPI:
                 if event is None:
                     _LOGGER.debug("[%s] run_docker_events RAW: None", self._instance)
                 else:
+                    # If Type=container, give some additional information
+                    addlog = ""
+                    if event["Type"] == "container":
+                        try:
+                            addlog = f", Name={event['Actor']['Attributes']['name']}"
+                        except:
+                            pass
+
                     _LOGGER.debug(
-                        "[%s] run_docker_events Type=%s, Action=%s",
+                        "[%s] run_docker_events Type=%s%s, Action=%s",
                         self._instance,
                         event["Type"],
+                        addlog,
                         event["Action"],
                     )
 
