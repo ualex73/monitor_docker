@@ -71,6 +71,13 @@ NOTE: This is untested, use at your own risk!
 
 ### Configuration
 
+#### GUI Assisted
+
+1. Klick Add integration and select "Monitor Docker"
+2. In the configuration window enter your settings
+
+#### Manual
+
 To use the `monitor_docker` in your installation, add the following to your `configuration.yaml` file:
 
 ```yaml
