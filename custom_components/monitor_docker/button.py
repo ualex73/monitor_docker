@@ -6,7 +6,11 @@ import re
 from typing import Any
 
 import voluptuous as vol
-from custom_components.monitor_docker.helpers import DockerAPI, DockerContainerAPI
+from custom_components.monitor_docker.helpers import (
+    DockerAPI,
+    DockerContainerAPI,
+    DockerContainerEntity,
+)
 from homeassistant.components.button import ENTITY_ID_FORMAT, ButtonEntity
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
@@ -165,8 +169,9 @@ async def async_setup_platform(
 
     return True
 
+
 #################################################################
-class DockerContainerButton(ButtonEntity):
+class DockerContainerButton(ButtonEntity, DockerContainerEntity):
     def __init__(
         self, 
         container: DockerContainerAPI,
@@ -177,6 +182,8 @@ class DockerContainerButton(ButtonEntity):
         alias_name: str,
         name_format: str,
     ):
+        super().__init__(container, alias_name)
+
         self._container = container
         self._instance = instance
         self._prefix = prefix
@@ -213,7 +220,7 @@ class DockerContainerButton(ButtonEntity):
     @property
     def is_on(self) -> bool:
         return self._state
-                                 
+
     async def async_press(self, **kwargs: Any) -> None:
         await self._container.restart()
         self._state = False

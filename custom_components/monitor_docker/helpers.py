@@ -11,6 +11,8 @@ from typing import Any, Callable
 
 import aiodocker
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.entity import Entity
 import homeassistant.util.dt as dt_util
 from dateutil import parser, relativedelta
 from homeassistant.const import (
@@ -817,6 +819,10 @@ class DockerAPI:
     def get_info(self) -> dict[str, Any]:
         return self._info
 
+    #############################################################
+    def get_url(self) -> str:
+        return self._config[CONF_URL]
+
 
 #################################################################
 class DockerContainerAPI:
@@ -1495,6 +1501,11 @@ class DockerContainerAPI:
         return self._stats
 
     #############################################################
+    def get_api(self) -> DockerAPI:
+        """Return the container stats."""
+        return self._api
+
+    #############################################################
     def register_callback(self, callback: Callable, variable: str):
         """Register callback from sensor/switch/button."""
         if callback not in self._subscribers:
@@ -1545,4 +1556,19 @@ class DockerContainerAPI:
 
         return "{} {}".format(
             delta.seconds, "second" if delta.seconds == 1 else "seconds"
+        )
+
+
+class DockerContainerEntity(Entity):
+    """Generic entity functions."""
+
+    def __init__(self, container: DockerContainerAPI, alias_name: str) -> None:
+        """Initialize the base for Container entities."""
+        container_info = container.get_info()
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, container_info.get(CONTAINER_INFO_IMAGE))},
+            name=alias_name,
+            manufacturer=container_info.get(CONTAINER_INFO_IMAGE).split("/")[0],
+            entry_type=DeviceEntryType.SERVICE,
+            via_device=(DOMAIN, container.get_api().docker_host),
         )
