@@ -104,7 +104,7 @@ class DockerAPI:
 
         _LOGGER.debug("[%s]: Helper version: %s", self._instance, VERSION)
 
-        self._interval: int = config[CONF_SCAN_INTERVAL].seconds
+        self._interval: int = config[CONF_SCAN_INTERVAL]
         self._retry_interval: int = config[CONF_RETRY]
         _LOGGER.debug(
             "[%s]: CONF_SCAN_INTERVAL=%d, RETRY=%d",
@@ -834,7 +834,7 @@ class DockerContainerAPI:
         self._instance: str = config[CONF_NAME]
         self._memChange: int = config[CONF_MEMORYCHANGE]
         self._name = cname
-        self._interval: int = config[CONF_SCAN_INTERVAL].seconds
+        self._interval: int = config[CONF_SCAN_INTERVAL]
         self._retry_interval: int = config[CONF_RETRY]
         self._busy = False
         self._atInit = atInit

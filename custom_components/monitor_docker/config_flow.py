@@ -9,8 +9,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant import data_entry_flow
+from homeassistant import config_entries, data_entry_flow
 from homeassistant.const import (
     CONF_MONITORED_CONDITIONS,
     CONF_NAME,
@@ -43,6 +42,7 @@ from .const import (
     DEFAULT_BUTTONNAME,
     DEFAULT_NAME,
     DEFAULT_RETRY,
+    DEFAULT_SCAN_INTERVAL,
     DEFAULT_SENSORNAME,
     DEFAULT_SWITCHNAME,
     DOMAIN,
@@ -67,7 +67,7 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         CONF_NAME: DEFAULT_NAME,
         CONF_PREFIX: "",
         CONF_URL: "",
-        CONF_SCAN_INTERVAL: 10,
+        CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
         CONF_CERTPATH: "",
         CONF_RETRY: DEFAULT_RETRY,
         # Containers
@@ -115,9 +115,9 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
 
             # Convert some user_input data as preparation to calling API
-            user_input[CONF_SCAN_INTERVAL] = timedelta(
-                seconds=user_input[CONF_SCAN_INTERVAL]
-            )
+            # user_input[CONF_SCAN_INTERVAL] = timedelta(
+            #     seconds=user_input[CONF_SCAN_INTERVAL]
+            # )
             if user_input[CONF_URL] == "":
                 user_input[CONF_URL] = None
             user_input[CONF_MEMORYCHANGE] = self.data[CONF_MEMORYCHANGE]
@@ -128,8 +128,7 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "invalid_connection"
             except Exception as e:  # pylint: disable=broad-except
                 _LOGGER.exception("Unhandled exception in user step")
-                # _LOGGER.debug("Error: %s", str(e))
-                errors["base"] = e.message
+                errors["base"] = str(e)
 
             if not errors:
                 self.data.update(user_input)
@@ -156,7 +155,7 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_SCAN_INTERVAL, default=self.data[CONF_SCAN_INTERVAL]
                 ): int,
                 vol.Optional(CONF_CERTPATH, default=self.data[CONF_CERTPATH]): str,
-                vol.Optional(CONF_RETRY, default=self.data[CONF_RETRY]): int,
+                vol.Required(CONF_RETRY, default=self.data[CONF_RETRY]): int,
             }
         )
 
@@ -209,7 +208,9 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self.data.update(user_input)
             if not errors:
-                return self.async_create_entry(title="Docker", data=self.data)
+                return self.async_create_entry(
+                    title=self.data[CONF_NAME], data=self.data
+                )
 
         conditions_schema = vol.Schema(
             {
@@ -221,17 +222,17 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         multiple=True,
                     ),
                 ),
-                vol.Optional(CONF_SENSORNAME, default=DEFAULT_SENSORNAME): str,
-                vol.Optional(CONF_SWITCHENABLED, default=True): bool,
-                vol.Optional(CONF_SWITCHNAME, default=DEFAULT_SWITCHNAME): str,
-                vol.Optional(CONF_BUTTONENABLED, default=False): bool,
-                vol.Optional(CONF_BUTTONNAME, default=DEFAULT_BUTTONNAME): str,
-                vol.Optional(CONF_MEMORYCHANGE, default=100): int,
-                vol.Optional(CONF_PRECISION_CPU, default=PRECISION): int,
-                vol.Optional(CONF_PRECISION_MEMORY_MB, default=PRECISION): int,
-                vol.Optional(CONF_PRECISION_MEMORY_PERCENTAGE, default=PRECISION): int,
-                vol.Optional(CONF_PRECISION_NETWORK_KB, default=PRECISION): int,
-                vol.Optional(CONF_PRECISION_NETWORK_MB, default=PRECISION): int,
+                vol.Required(CONF_SENSORNAME, default=DEFAULT_SENSORNAME): str,
+                vol.Required(CONF_SWITCHENABLED, default=True): bool,
+                vol.Required(CONF_SWITCHNAME, default=DEFAULT_SWITCHNAME): str,
+                vol.Required(CONF_BUTTONENABLED, default=False): bool,
+                vol.Required(CONF_BUTTONNAME, default=DEFAULT_BUTTONNAME): str,
+                vol.Required(CONF_MEMORYCHANGE, default=100): int,
+                vol.Required(CONF_PRECISION_CPU, default=PRECISION): int,
+                vol.Required(CONF_PRECISION_MEMORY_MB, default=PRECISION): int,
+                vol.Required(CONF_PRECISION_MEMORY_PERCENTAGE, default=PRECISION): int,
+                vol.Required(CONF_PRECISION_NETWORK_KB, default=PRECISION): int,
+                vol.Required(CONF_PRECISION_NETWORK_MB, default=PRECISION): int,
             }
         )
 

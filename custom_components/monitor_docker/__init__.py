@@ -12,6 +12,7 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_SCAN_INTERVAL,
     CONF_URL,
+    Platform,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
@@ -41,6 +42,7 @@ from .const import (
     CONTAINER_INFO_ALLINONE,
     DEFAULT_NAME,
     DEFAULT_RETRY,
+    DEFAULT_SCAN_INTERVAL,
     DEFAULT_SENSORNAME,
     DEFAULT_SWITCHNAME,
     DEFAULT_BUTTONNAME,
@@ -52,14 +54,14 @@ from .helpers import DockerAPI
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_SCAN_INTERVAL = timedelta(seconds=10)
-
 DOCKER_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_PREFIX, default=""): cv.string,
         vol.Optional(CONF_URL, default=None): vol.Any(cv.string, None),
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
+        vol.Optional(
+            CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+        ): cv.positive_int,
         vol.Optional(CONF_MONITORED_CONDITIONS, default=[]): vol.All(
             cv.ensure_list,
             [vol.In(MONITORED_CONDITIONS_LIST)],
@@ -197,7 +199,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                 hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(hass, entry)
                 await hass.data[DOMAIN][entry[CONF_NAME]][API].init(startCount)
                 await hass.data[DOMAIN][entry[CONF_NAME]][API].run()
-                await hass.data[DOMAIN][entry[CONF_NAME]][API].load()
+                await hass.config_entries.async_forward_entry_setups(
+                    config_entry, [Platform.SENSOR]
+                )
+                # await hass.data[DOMAIN][entry[CONF_NAME]][API].load()
             except Exception as err:
                 doLoop = False
                 if entry[CONF_RETRY] == 0:

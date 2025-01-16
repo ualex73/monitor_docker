@@ -58,8 +58,12 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Sensor set up for Hass.io config entry."""
-    pass
-    # coordinator = hass.data[ADDONS_COORDINATOR]
+    await async_setup_platform(
+        hass=hass,
+        config=config_entry.data,
+        async_add_entities=async_add_entities,
+        discovery_info={"name": config_entry.data[CONF_NAME]},
+    )
 
 
 async def async_setup_platform(
