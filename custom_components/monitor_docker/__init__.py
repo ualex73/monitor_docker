@@ -6,7 +6,7 @@ from datetime import timedelta
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_MONITORED_CONDITIONS,
     CONF_NAME,
@@ -14,7 +14,6 @@ from homeassistant.const import (
     CONF_URL,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.reload import async_setup_reload_service
 
@@ -53,14 +52,16 @@ from .helpers import DockerAPI
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_SCAN_INTERVAL = timedelta(seconds=10)
+DEFAULT_SCAN_INTERVAL = 10
 
 DOCKER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_PREFIX, default=""): cv.string,
         vol.Optional(CONF_URL, default=None): vol.Any(cv.string, None),
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
+        vol.Optional(
+            CONF_SCAN_INTERVAL, default=timedelta(seconds=DEFAULT_SCAN_INTERVAL)
+        ): cv.time_period,
         vol.Optional(CONF_MONITORED_CONDITIONS, default=[]): vol.All(
             cv.ensure_list,
             [vol.In(MONITORED_CONDITIONS_LIST)],
@@ -94,9 +95,6 @@ DOCKER_SCHEMA = vol.Schema(
 CONFIG_SCHEMA = vol.Schema(
     {DOMAIN: vol.All(cv.ensure_list, [vol.Any(DOCKER_SCHEMA)])}, extra=vol.ALLOW_EXTRA
 )
-
-class ConnectionFailed(HomeAssistantError):
-    """Error to indicate there is invalid connection."""
 
 
 #################################################################

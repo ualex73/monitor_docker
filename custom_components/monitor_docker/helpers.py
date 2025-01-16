@@ -110,8 +110,7 @@ class DockerAPI:
             "[%s] CONF_SCAN_INTERVAL=%d, RETRY=%", self._interval, self._retry_interval
         )
 
-    async def init(self, startCount=0):
-
+    async def init(self, startCount=0) -> bool:
         # Set to None when called twice, etc
         self._api = None
 
@@ -216,7 +215,7 @@ class DockerAPI:
                 str(err),
                 exc_info=exc_info,
             )
-            return
+            return False
 
         versionInfo = await self._api.version()
         version: str | None = versionInfo.get("Version", None)
@@ -259,6 +258,8 @@ class DockerAPI:
                 {CONF_NAME: self._instance},
                 self._config,
             )
+
+        return True
 
     #############################################################
     def _docker_ssl_context(self) -> ssl.SSLContext | None:
