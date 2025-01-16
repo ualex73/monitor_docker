@@ -75,12 +75,12 @@ _LOGGER = logging.getLogger(__name__)
 
 def toKB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to kBytes."""
-    return round(value / (1024 ** 1), precision)
+    return round(value / (1024**1), precision)
 
 
 def toMB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to MBytes."""
-    return round(value / (1024 ** 2), precision)
+    return round(value / (1024**2), precision)
 
 
 #################################################################
@@ -107,7 +107,10 @@ class DockerAPI:
         self._interval: int = config[CONF_SCAN_INTERVAL].seconds
         self._retry_interval: int = config[CONF_RETRY]
         _LOGGER.debug(
-            "[%s] CONF_SCAN_INTERVAL=%d, RETRY=%", self._interval, self._retry_interval
+            "[%s]: CONF_SCAN_INTERVAL=%d, RETRY=%d",
+            self._instance,
+            self._interval,
+            self._retry_interval,
         )
 
     async def init(self, startCount=0) -> bool:
@@ -150,7 +153,6 @@ class DockerAPI:
 
             # If is not empty or an Unix socket, then do check TCP/SSL
             if url is not None and url.find("unix:") == -1:
-
                 # Check if URL is valid
                 if not (
                     url.find("tcp:") == 0
@@ -238,7 +240,7 @@ class DockerAPI:
 
             # We will monitor all containers, including excluded ones.
             # This is needed to get total CPU/Memory usage.
-            _LOGGER.debug("[%s] %s: Container Monitored", self._instance, cname)
+            _LOGGER.debug("[%s] %s: Container added", self._instance, cname)
 
             # Create our Docker Container API
             self._containers[cname] = DockerContainerAPI(
@@ -246,10 +248,20 @@ class DockerAPI:
                 self._api,
                 cname,
             )
-            await self._containers[cname].init()
+            # await self._containers[cname].init()
 
         self._hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
 
+        return True
+
+    async def run(self):
+        for container in self._containers.values():
+            _LOGGER.debug(
+                "[%s] %s: Container monitored", self._instance, container._name
+            )
+            await container.init()
+
+    async def load(self):
         for component in COMPONENTS:
             load_platform(
                 self._hass,
@@ -258,8 +270,6 @@ class DockerAPI:
                 {CONF_NAME: self._instance},
                 self._config,
             )
-
-        return True
 
     #############################################################
     def _docker_ssl_context(self) -> ssl.SSLContext | None:
@@ -290,7 +300,6 @@ class DockerAPI:
 
     #############################################################
     async def _reconnectx(self):
-
         while True:
             _LOGGER.debug("[%s] Reconnecting", self._instance)
 
@@ -618,7 +627,6 @@ class DockerAPI:
         self._dockerStopped = False
 
         while True:
-
             error = True
 
             try:
@@ -901,7 +909,6 @@ class DockerContainerAPI:
         """Loop to gather container info/stats."""
 
         while True:
-
             sendNotify = True
             error = True
 
