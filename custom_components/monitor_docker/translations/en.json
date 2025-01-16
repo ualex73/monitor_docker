@@ -63,4 +63,5 @@
             "name_exists": "Name already exists",
             "invalid_connection": "Could not connect to Docker"
         }
-    }}
+    }
+}
