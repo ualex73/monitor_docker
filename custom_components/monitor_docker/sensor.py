@@ -11,6 +11,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_MONITORED_CONDITIONS, CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -49,6 +50,16 @@ from .const import (
 from .helpers import DockerAPI, DockerContainerAPI
 
 _LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Sensor set up for Hass.io config entry."""
+    pass
+    # coordinator = hass.data[ADDONS_COORDINATOR]
 
 
 async def async_setup_platform(
@@ -166,7 +177,6 @@ async def async_setup_platform(
                             and variable not in CONTAINER_MONITOR_NETWORK_LIST
                         )
                     ):
-
                         # Only force rename of entityid is requested, to not break backwards compatibility
                         alias_entityid = cname
                         if config[CONF_RENAME_ENITITY]:
