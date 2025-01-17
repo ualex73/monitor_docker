@@ -243,7 +243,7 @@ class DockerSensor(SensorEntity):
 
         api_info = self._api.get_info()
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self._api.get_url())},
+            identifiers={(DOMAIN, f"{self._instance}_{self._api.get_url()}")},
             name=self._instance,
             model=api_info.get(ATTR_VERSION_OS),
             manufacturer="Docker",
@@ -327,7 +327,7 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
         condition_list: list | None = None,
     ):
         """Initialize the sensor."""
-        super().__init__(container, alias_name)
+        super().__init__(container, alias_name, instance)
 
         self._instance = instance
         self._container = container

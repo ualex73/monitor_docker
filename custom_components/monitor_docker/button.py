@@ -195,7 +195,7 @@ class DockerContainerButton(ButtonEntity, DockerContainerEntity):
         alias_name: str,
         name_format: str,
     ):
-        super().__init__(container, alias_name)
+        super().__init__(container, alias_name, instance)
 
         self._container = container
         self._instance = instance

@@ -1562,14 +1562,18 @@ class DockerContainerAPI:
 class DockerContainerEntity(Entity):
     """Generic entity functions."""
 
-    def __init__(self, container: DockerContainerAPI, alias_name: str) -> None:
+    def __init__(
+        self, container: DockerContainerAPI, alias_name: str, instance: str
+    ) -> None:
         """Initialize the base for Container entities."""
         container_info = container.get_info()
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, container_info.get(CONTAINER_INFO_IMAGE))},
+            identifiers={
+                (DOMAIN, f"{instance}_{container_info.get(CONTAINER_INFO_IMAGE)}")
+            },
             name=alias_name,
             manufacturer=str(container_info.get(CONTAINER_INFO_IMAGE)).split("/")[0],
             # model_id=container_info.get(),    # Not available
             entry_type=DeviceEntryType.SERVICE,
-            via_device=(DOMAIN, container.get_api().docker_host),
+            via_device=(DOMAIN, f"{instance}_{container.get_api().docker_host}"),
         )
