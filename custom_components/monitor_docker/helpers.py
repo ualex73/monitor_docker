@@ -1569,6 +1569,7 @@ class DockerContainerEntity(Entity):
             identifiers={(DOMAIN, container_info.get(CONTAINER_INFO_IMAGE))},
             name=alias_name,
             manufacturer=str(container_info.get(CONTAINER_INFO_IMAGE)).split("/")[0],
+            # model_id=container_info.get(),    # Not available
             entry_type=DeviceEntryType.SERVICE,
             via_device=(DOMAIN, container.get_api().docker_host),
         )

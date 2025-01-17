@@ -37,7 +37,14 @@
                 "data": {
                     "containers": "Array of containers to monitor (keep empty to add all, and new)",
                     "containers_exclude": "Array of containers to be excluded from monitoring, when all containers are included",
+                    "rename_containers": "Open i extra dialog with the possibility to rename selected containers",
                     "rename": "Dictionary of containers to rename. Renaming is done on the name in HA Lovelace, not entity name",
+                    "rename_entity": "If rename is done, it changes also the entity name"
+                }
+            },
+            "containers_rename": {
+                "description": "Select a display name for each container",
+                "data": {
                     "rename_entity": "If rename is done, it changes also the entity name"
                 }
             },
