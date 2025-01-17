@@ -11,6 +11,8 @@ from typing import Any, Callable
 
 import aiodocker
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.entity import Entity
 import homeassistant.util.dt as dt_util
 from dateutil import parser, relativedelta
 from homeassistant.const import (
@@ -75,12 +77,12 @@ _LOGGER = logging.getLogger(__name__)
 
 def toKB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to kBytes."""
-    return round(value / (1024 ** 1), precision)
+    return round(value / (1024**1), precision)
 
 
 def toMB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to MBytes."""
-    return round(value / (1024 ** 2), precision)
+    return round(value / (1024**2), precision)
 
 
 #################################################################
@@ -104,14 +106,16 @@ class DockerAPI:
 
         _LOGGER.debug("[%s]: Helper version: %s", self._instance, VERSION)
 
-        self._interval: int = config[CONF_SCAN_INTERVAL].seconds
+        self._interval: int = config[CONF_SCAN_INTERVAL]
         self._retry_interval: int = config[CONF_RETRY]
         _LOGGER.debug(
-            "[%s] CONF_SCAN_INTERVAL=%d, RETRY=%", self._interval, self._retry_interval
+            "[%s]: CONF_SCAN_INTERVAL=%d, RETRY=%d",
+            self._instance,
+            self._interval,
+            self._retry_interval,
         )
 
-    async def init(self, startCount=0):
-
+    async def init(self, startCount=0) -> bool:
         # Set to None when called twice, etc
         self._api = None
 
@@ -151,7 +155,6 @@ class DockerAPI:
 
             # If is not empty or an Unix socket, then do check TCP/SSL
             if url is not None and url.find("unix:") == -1:
-
                 # Check if URL is valid
                 if not (
                     url.find("tcp:") == 0
@@ -216,7 +219,7 @@ class DockerAPI:
                 str(err),
                 exc_info=exc_info,
             )
-            return
+            return False
 
         versionInfo = await self._api.version()
         version: str | None = versionInfo.get("Version", None)
@@ -239,7 +242,7 @@ class DockerAPI:
 
             # We will monitor all containers, including excluded ones.
             # This is needed to get total CPU/Memory usage.
-            _LOGGER.debug("[%s] %s: Container Monitored", self._instance, cname)
+            _LOGGER.debug("[%s] %s: Container added", self._instance, cname)
 
             # Create our Docker Container API
             self._containers[cname] = DockerContainerAPI(
@@ -247,10 +250,20 @@ class DockerAPI:
                 self._api,
                 cname,
             )
-            await self._containers[cname].init()
+            # await self._containers[cname].init()
 
         self._hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
 
+        return True
+
+    async def run(self):
+        for container in self._containers.values():
+            _LOGGER.debug(
+                "[%s] %s: Container monitored", self._instance, container._name
+            )
+            await container.init()
+
+    async def load(self):
         for component in COMPONENTS:
             load_platform(
                 self._hass,
@@ -289,7 +302,6 @@ class DockerAPI:
 
     #############################################################
     async def _reconnectx(self):
-
         while True:
             _LOGGER.debug("[%s] Reconnecting", self._instance)
 
@@ -617,7 +629,6 @@ class DockerAPI:
         self._dockerStopped = False
 
         while True:
-
             error = True
 
             try:
@@ -808,6 +819,10 @@ class DockerAPI:
     def get_info(self) -> dict[str, Any]:
         return self._info
 
+    #############################################################
+    def get_url(self) -> str:
+        return self._config[CONF_URL]
+
 
 #################################################################
 class DockerContainerAPI:
@@ -825,7 +840,7 @@ class DockerContainerAPI:
         self._instance: str = config[CONF_NAME]
         self._memChange: int = config[CONF_MEMORYCHANGE]
         self._name = cname
-        self._interval: int = config[CONF_SCAN_INTERVAL].seconds
+        self._interval: int = config[CONF_SCAN_INTERVAL]
         self._retry_interval: int = config[CONF_RETRY]
         self._busy = False
         self._atInit = atInit
@@ -900,7 +915,6 @@ class DockerContainerAPI:
         """Loop to gather container info/stats."""
 
         while True:
-
             sendNotify = True
             error = True
 
@@ -1487,6 +1501,11 @@ class DockerContainerAPI:
         return self._stats
 
     #############################################################
+    def get_api(self) -> DockerAPI:
+        """Return the container stats."""
+        return self._api
+
+    #############################################################
     def register_callback(self, callback: Callable, variable: str):
         """Register callback from sensor/switch/button."""
         if callback not in self._subscribers:
@@ -1537,4 +1556,24 @@ class DockerContainerAPI:
 
         return "{} {}".format(
             delta.seconds, "second" if delta.seconds == 1 else "seconds"
+        )
+
+
+class DockerContainerEntity(Entity):
+    """Generic entity functions."""
+
+    def __init__(
+        self, container: DockerContainerAPI, alias_name: str, instance: str
+    ) -> None:
+        """Initialize the base for Container entities."""
+        container_info = container.get_info()
+        self._attr_device_info = DeviceInfo(
+            identifiers={
+                (DOMAIN, f"{instance}_{container_info.get(CONTAINER_INFO_IMAGE)}")
+            },
+            name=alias_name,
+            manufacturer=str(container_info.get(CONTAINER_INFO_IMAGE)).split("/")[0],
+            # model_id=container_info.get(),    # Not available
+            entry_type=DeviceEntryType.SERVICE,
+            via_device=(DOMAIN, f"{instance}_{container.get_api().docker_host}"),
         )

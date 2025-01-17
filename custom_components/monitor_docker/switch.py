@@ -6,7 +6,8 @@ import re
 from typing import Any
 
 import voluptuous as vol
-from custom_components.monitor_docker.helpers import DockerAPI, DockerContainerAPI
+
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
@@ -33,10 +34,26 @@ from .const import (
     DOMAIN,
     SERVICE_RESTART,
 )
+from .helpers import DockerAPI, DockerContainerAPI, DockerContainerEntity
+
 
 SERVICE_RESTART_SCHEMA = vol.Schema({ATTR_NAME: cv.string, ATTR_SERVER: cv.string})
 
 _LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Sensor set up for Hass.io config entry."""
+    await async_setup_platform(
+        hass=hass,
+        config=config_entry.data,
+        async_add_entities=async_add_entities,
+        discovery_info={"name": config_entry.data[CONF_NAME]},
+    )
 
 
 async def async_setup_platform(
@@ -167,7 +184,7 @@ async def async_setup_platform(
 
 
 #################################################################
-class DockerContainerSwitch(SwitchEntity):
+class DockerContainerSwitch(SwitchEntity, DockerContainerEntity):
     def __init__(
         self,
         container: DockerContainerAPI,
@@ -178,21 +195,23 @@ class DockerContainerSwitch(SwitchEntity):
         alias_name: str,
         name_format: str,
     ):
+        super().__init__(container, alias_name, instance)
+
         self._container = container
         self._instance = instance
         self._prefix = prefix
         self._cname = cname
         self._state = False
-        self._entity_id: str = ENTITY_ID_FORMAT.format(
+        self._attr_unique_id: str = ENTITY_ID_FORMAT.format(
             slugify(f"{self._prefix}_{alias_entityid}")
         )
         self._name = name_format.format(name=alias_name)
         self._removed = False
 
-    @property
-    def entity_id(self) -> str:
-        """Return the entity id of the switch."""
-        return self._entity_id
+    # @property
+    # def entity_id(self) -> str:
+    #     """Return the entity id of the switch."""
+    #     return self._entity_id
 
     @property
     def name(self) -> str:

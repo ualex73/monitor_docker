@@ -4,6 +4,7 @@ import asyncio
 import logging
 from datetime import timedelta
 
+from homeassistant.config_entries import ConfigEntry
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.const import (
@@ -11,6 +12,7 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_SCAN_INTERVAL,
     CONF_URL,
+    Platform,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
@@ -40,6 +42,7 @@ from .const import (
     CONTAINER_INFO_ALLINONE,
     DEFAULT_NAME,
     DEFAULT_RETRY,
+    DEFAULT_SCAN_INTERVAL,
     DEFAULT_SENSORNAME,
     DEFAULT_SWITCHNAME,
     DEFAULT_BUTTONNAME,
@@ -51,14 +54,16 @@ from .helpers import DockerAPI
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_SCAN_INTERVAL = timedelta(seconds=10)
+PLATFORMS = [Platform.BUTTON, Platform.SENSOR, Platform.SWITCH]
 
 DOCKER_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_PREFIX, default=""): cv.string,
         vol.Optional(CONF_URL, default=None): vol.Any(cv.string, None),
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
+        vol.Optional(
+            CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+        ): cv.positive_int,
         vol.Optional(CONF_MONITORED_CONDITIONS, default=[]): vol.All(
             cv.ensure_list,
             [vol.In(MONITORED_CONDITIONS_LIST)],
@@ -113,6 +118,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             try:
                 hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(hass, entry)
                 await hass.data[DOMAIN][entry[CONF_NAME]][API].init(startCount)
+                await hass.data[DOMAIN][entry[CONF_NAME]][API].run()
+                await hass.data[DOMAIN][entry[CONF_NAME]][API].load()
             except Exception as err:
                 doLoop = False
                 if entry[CONF_RETRY] == 0:
@@ -137,11 +144,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     # await async_setup_reload_service(hass, DOMAIN, [DOMAIN])
 
     # Create domain monitor_docker data variable
-    hass.data[DOMAIN] = {}
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {}
+
+    if DOMAIN not in config:
+        return True  # To continue with async_setup_entry
 
     # Now go through all possible entries, we support 1 or more docker hosts (untested)
     for entry in config[DOMAIN]:
-
         # Default MONITORED_CONDITIONS_LIST also contains allinone, so we need to fix it up here
         if len(entry[CONF_MONITORED_CONDITIONS]) == 0:
             # Add whole list, including allinone. Make a copy, no reference
@@ -167,6 +177,86 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         # Each docker hosts runs in its own thread. We need to pass hass too, for the load_platform
         asyncio.create_task(RunDocker(hass, entry))
+
+    return True
+
+
+#################################################################
+async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Set up this integration using UI."""
+
+    async def RunDocker(hass: HomeAssistant, entry: ConfigType) -> None:
+        """Wrapper around function for a separated thread."""
+
+        # Create docker instance, it will have asyncio threads
+        hass.data[DOMAIN][entry[CONF_NAME]] = {}
+        hass.data[DOMAIN][entry[CONF_NAME]][CONFIG] = entry
+
+        startCount = 0
+
+        while True:
+            doLoop = True
+
+            try:
+                hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(hass, entry)
+                await hass.data[DOMAIN][entry[CONF_NAME]][API].init(startCount)
+                await hass.data[DOMAIN][entry[CONF_NAME]][API].run()
+                await hass.config_entries.async_forward_entry_setups(
+                    config_entry, PLATFORMS
+                )
+                # await hass.data[DOMAIN][entry[CONF_NAME]][API].load()
+            except Exception as err:
+                doLoop = False
+                if entry[CONF_RETRY] == 0:
+                    raise
+                else:
+                    _LOGGER.error("Failed Docker connect: %s", str(err))
+                    _LOGGER.error("Retry in %d seconds", entry[CONF_RETRY])
+                    await asyncio.sleep(entry[CONF_RETRY])
+
+            startCount += 1
+
+            if doLoop:
+                # Now run forever in this separated thread
+                # loop.run_forever()
+
+                # We only get here if a docker instance disconnected or HASS is stopping
+                if not hass.data[DOMAIN][entry[CONF_NAME]][API]._dockerStopped:
+                    # If HASS stopped, do not retry
+                    break
+
+    # config_entry.async_on_unload(config_entry.add_update_listener(async_reload_entry))
+
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = {}
+
+    # For now this is disabled as selection of conditions is made in the UI.
+    #
+    # # Default MONITORED_CONDITIONS_LIST also contains allinone, so we need to fix it up here
+    # if len(config_entry.data[CONF_MONITORED_CONDITIONS]) == 0:
+    #     # Add whole list, including allinone. Make a copy, no reference
+    #     config_entry.data[CONF_MONITORED_CONDITIONS] = MONITORED_CONDITIONS_LIST.copy()
+    #     # remove the allinone
+    #     config_entry.data[CONF_MONITORED_CONDITIONS].remove(CONTAINER_INFO_ALLINONE)
+    #
+    # # Check if CONF_MONITORED_CONDITIONS has only ALLINONE, then expand to all
+    # if (
+    #     len(config_entry.data[CONF_MONITORED_CONDITIONS]) == 1
+    #     and CONTAINER_INFO_ALLINONE in config_entry.data[CONF_MONITORED_CONDITIONS]
+    # ):
+    #     config_entry.data[CONF_MONITORED_CONDITIONS] = list(MONITORED_CONDITIONS_LIST) + list(
+    #         [CONTAINER_INFO_ALLINONE]
+    #     )
+
+    if config_entry.data[CONF_NAME] in hass.data[DOMAIN]:
+        _LOGGER.error(
+            "Instance %s is duplicate, please assign an unique name",
+            config_entry.data[CONF_NAME],
+        )
+        return False
+
+    # Each docker hosts runs in its own thread. We need to pass hass too, for the load_platform
+    asyncio.create_task(RunDocker(hass, config_entry.data))
 
     return True
 
