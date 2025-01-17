@@ -173,7 +173,7 @@ async def async_setup_platform(
 #################################################################
 class DockerContainerButton(ButtonEntity, DockerContainerEntity):
     def __init__(
-        self, 
+        self,
         container: DockerContainerAPI,
         instance: str,
         prefix: str,
@@ -189,16 +189,16 @@ class DockerContainerButton(ButtonEntity, DockerContainerEntity):
         self._prefix = prefix
         self._cname = cname
         self._state = False
-        self._entity_id = ENTITY_ID_FORMAT.format(
+        self._attr_unique_id = ENTITY_ID_FORMAT.format(
             slugify(self._prefix + "_" + self._cname + "_restart")
         )
         self._name = name_format.format(name=alias_name)
         self._removed = False
 
-    @property
-    def entity_id(self) -> str:
-        """Return the entity id of the button."""
-        return self._entity_id
+    # @property
+    # def entity_id(self) -> str:
+    #     """Return the entity id of the button."""
+    #     return self._entity_id
 
     @property
     def name(self) -> str:

@@ -230,7 +230,7 @@ class DockerSensor(SensorEntity):
 
         self.entity_description = description
 
-        self._entity_id: str = ENTITY_ID_FORMAT.format(
+        self._attr_unique_id: str = ENTITY_ID_FORMAT.format(
             slugify(f"{self._prefix}_{self.entity_description.name}")
         )
         self._name = "{name} {sensor}".format(
@@ -258,10 +258,10 @@ class DockerSensor(SensorEntity):
             self.entity_description.name,
         )
 
-    @property
-    def entity_id(self) -> str:
-        """Return the entity id of the sensor."""
-        return self._entity_id
+    # @property
+    # def entity_id(self) -> str:
+    #     """Return the entity id of the sensor."""
+    #     return self._entity_id
 
     @property
     def native_value(self) -> str | None:
@@ -338,7 +338,7 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
         self.entity_description = description
 
         if self.entity_description.key == CONTAINER_INFO_ALLINONE:
-            self._entity_id = ENTITY_ID_FORMAT.format(
+            self._attr_unique_id = ENTITY_ID_FORMAT.format(
                 slugify(f"{self._prefix}_{alias_entityid}")
             )
             self._attr_name = ENTITY_ID_FORMAT.format(
@@ -348,7 +348,7 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
                 name=alias_name, sensorname="", sensor=""
             )
         else:
-            self._entity_id = ENTITY_ID_FORMAT.format(
+            self._attr_unique_id = ENTITY_ID_FORMAT.format(
                 slugify(
                     f"{self._prefix}_{alias_entityid}_{self.entity_description.name}"
                 )
@@ -372,10 +372,10 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
             self.entity_description.name,
         )
 
-    @property
-    def entity_id(self) -> str:
-        """Return the entity id of the sensor."""
-        return self._entity_id
+    # @property
+    # def entity_id(self) -> str:
+    #     """Return the entity id of the sensor."""
+    #     return self._entity_id
 
     @property
     def icon(self) -> str:

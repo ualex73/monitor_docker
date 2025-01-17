@@ -189,16 +189,16 @@ class DockerContainerSwitch(SwitchEntity, DockerContainerEntity):
         self._prefix = prefix
         self._cname = cname
         self._state = False
-        self._entity_id: str = ENTITY_ID_FORMAT.format(
+        self._attr_unique_id: str = ENTITY_ID_FORMAT.format(
             slugify(f"{self._prefix}_{alias_entityid}")
         )
         self._name = name_format.format(name=alias_name)
         self._removed = False
 
-    @property
-    def entity_id(self) -> str:
-        """Return the entity id of the switch."""
-        return self._entity_id
+    # @property
+    # def entity_id(self) -> str:
+    #     """Return the entity id of the switch."""
+    #     return self._entity_id
 
     @property
     def name(self) -> str:
