@@ -54,6 +54,8 @@ from .helpers import DockerAPI
 
 _LOGGER = logging.getLogger(__name__)
 
+PLATFORMS = [Platform.BUTTON, Platform.SENSOR, Platform.SWITCH]
+
 DOCKER_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
@@ -200,7 +202,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                 await hass.data[DOMAIN][entry[CONF_NAME]][API].init(startCount)
                 await hass.data[DOMAIN][entry[CONF_NAME]][API].run()
                 await hass.config_entries.async_forward_entry_setups(
-                    config_entry, [Platform.SENSOR]
+                    config_entry, PLATFORMS
                 )
                 # await hass.data[DOMAIN][entry[CONF_NAME]][API].load()
             except Exception as err:
