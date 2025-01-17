@@ -230,13 +230,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
+    # For now this is disabled as selection of conditions is made in the UI.
+    #
     # # Default MONITORED_CONDITIONS_LIST also contains allinone, so we need to fix it up here
     # if len(config_entry.data[CONF_MONITORED_CONDITIONS]) == 0:
     #     # Add whole list, including allinone. Make a copy, no reference
     #     config_entry.data[CONF_MONITORED_CONDITIONS] = MONITORED_CONDITIONS_LIST.copy()
     #     # remove the allinone
     #     config_entry.data[CONF_MONITORED_CONDITIONS].remove(CONTAINER_INFO_ALLINONE)
-
+    #
     # # Check if CONF_MONITORED_CONDITIONS has only ALLINONE, then expand to all
     # if (
     #     len(config_entry.data[CONF_MONITORED_CONDITIONS]) == 1
