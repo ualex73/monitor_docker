@@ -26,6 +26,8 @@ from .const import (
     CONF_CERTPATH,
     CONF_CONTAINERS,
     CONF_CONTAINERS_EXCLUDE,
+    CONF_MONITORED_CONTAINER_CONDITIONS,
+    CONF_MONITORED_DOCKER_CONDITIONS,
     CONF_MEMORYCHANGE,
     CONF_PRECISION_CPU,
     CONF_PRECISION_MEMORY_MB,
@@ -39,14 +41,17 @@ from .const import (
     CONF_SENSORNAME,
     CONF_SWITCHENABLED,
     CONF_SWITCHNAME,
+    CONTAINER_MONITOR_LIST,
+    CONTAINER_PRE_SELECTION,
     DEFAULT_BUTTONNAME,
     DEFAULT_NAME,
     DEFAULT_RETRY,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SENSORNAME,
     DEFAULT_SWITCHNAME,
+    DOCKER_MONITOR_LIST,
+    DOCKER_PRE_SELECTION,
     DOMAIN,
-    MONITORED_CONDITIONS_LIST,
     PRECISION,
 )
 from .helpers import DockerAPI
@@ -92,6 +97,8 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     options = None
     _docker_api = None
     _reauth_entry: config_entries.ConfigEntry | None = None
+    _docker_conditions = DOCKER_PRE_SELECTION
+    _container_conditions = CONTAINER_PRE_SELECTION
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -206,8 +213,16 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
+            self._docker_conditions = user_input.pop(CONF_MONITORED_DOCKER_CONDITIONS)
+            self._container_conditions = user_input.pop(
+                CONF_MONITORED_CONTAINER_CONDITIONS
+            )
             self.data.update(user_input)
+
             if not errors:
+                self.data[CONF_MONITORED_CONDITIONS] = (
+                    self._docker_conditions + self._container_conditions
+                )
                 return self.async_create_entry(
                     title=self.data[CONF_NAME], data=self.data
                 )
@@ -215,10 +230,19 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         conditions_schema = vol.Schema(
             {
                 vol.Optional(
-                    CONF_MONITORED_CONDITIONS, default=[]
+                    CONF_MONITORED_DOCKER_CONDITIONS, default=self._docker_conditions
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=MONITORED_CONDITIONS_LIST,
+                        options=list(DOCKER_MONITOR_LIST),
+                        multiple=True,
+                    ),
+                ),
+                vol.Optional(
+                    CONF_MONITORED_CONTAINER_CONDITIONS,
+                    default=self._container_conditions,
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=list(CONTAINER_MONITOR_LIST),
                         multiple=True,
                     ),
                 ),

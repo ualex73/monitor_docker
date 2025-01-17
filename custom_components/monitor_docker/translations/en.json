@@ -44,11 +44,12 @@
             "conditions": {
                 "description": "Setup a connection to docker host",
                 "data": {
-                    "monitored_conditions": "Array of conditions to be monitored",
+                    "monitored_docker_conditions": "Conditions of the controller to be monitored",
+                    "monitored_container_conditions": "Conditions of each container to be monitored",
                     "sensor_name": "Sensor string to format the name used in Home Assistant",
                     "switchenabled": "Enable/Disable the switch entity for containers",
                     "switchname": "Switch string to format the name used in Home Assistant",
-                    "buttonanabled": "Enable/Disable the button entity for containers",
+                    "buttonenabled": "Enable/Disable the button entity for containers",
                     "buttonname": "Button string to format the name used in Home Assistant",
                     "memorychange": "Change of memory usage before alerting",
                     "precision_cpu": "Precision of CPU usage percentage",

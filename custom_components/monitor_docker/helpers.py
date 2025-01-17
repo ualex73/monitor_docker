@@ -1568,7 +1568,7 @@ class DockerContainerEntity(Entity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, container_info.get(CONTAINER_INFO_IMAGE))},
             name=alias_name,
-            manufacturer=container_info.get(CONTAINER_INFO_IMAGE).split("/")[0],
+            manufacturer=str(container_info.get(CONTAINER_INFO_IMAGE)).split("/")[0],
             entry_type=DeviceEntryType.SERVICE,
             via_device=(DOMAIN, container.get_api().docker_host),
         )
