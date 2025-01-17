@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-# from collections.abc import Mapping
-from datetime import timedelta
 import logging
 from typing import Any
 
@@ -18,7 +16,6 @@ from homeassistant.const import (
 )
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
-import homeassistant.helpers.config_validation as cv
 
 from .const import (
     CONF_BUTTONENABLED,
@@ -26,9 +23,9 @@ from .const import (
     CONF_CERTPATH,
     CONF_CONTAINERS,
     CONF_CONTAINERS_EXCLUDE,
+    CONF_MEMORYCHANGE,
     CONF_MONITORED_CONTAINER_CONDITIONS,
     CONF_MONITORED_DOCKER_CONDITIONS,
-    CONF_MEMORYCHANGE,
     CONF_PRECISION_CPU,
     CONF_PRECISION_MEMORY_MB,
     CONF_PRECISION_MEMORY_PERCENTAGE,
@@ -58,10 +55,6 @@ from .helpers import DockerAPI
 
 _LOGGER = logging.getLogger(__name__)
 
-# PLACEHOLDERS = {
-#     CONF_URL: "URL",
-# }
-
 
 class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Docker config flow."""
@@ -77,8 +70,8 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         CONF_RETRY: DEFAULT_RETRY,
         # Containers
         CONF_CONTAINERS: [],
-        CONF_CONTAINERS_EXCLUDE: [],
-        CONF_RENAME: {},
+        # CONF_CONTAINERS_EXCLUDE: [],  # Not relevant as all are selected
+        # CONF_RENAME: {},              # Have to figure out how this could be done
         CONF_RENAME_ENITITY: False,
         # Conditions
         CONF_MONITORED_CONDITIONS: [],
@@ -114,7 +107,6 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 and user_input[CONF_NAME] in self.hass.data[DOMAIN]
             ):
                 errors[CONF_NAME] = "name_exists"
-                # raise data_entry_flow.AbortFlow("already_configured")
 
             await self.async_set_unique_id(user_input[CONF_NAME])
 
@@ -122,9 +114,6 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
 
             # Convert some user_input data as preparation to calling API
-            # user_input[CONF_SCAN_INTERVAL] = timedelta(
-            #     seconds=user_input[CONF_SCAN_INTERVAL]
-            # )
             if user_input[CONF_URL] == "":
                 user_input[CONF_URL] = None
             user_input[CONF_MEMORYCHANGE] = self.data[CONF_MEMORYCHANGE]
@@ -168,9 +157,7 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            # data_schema=DOCKER_SCHEMA,
             data_schema=user_schema,
-            # description_placeholders=PLACEHOLDERS,
             errors=errors,
         )
 
@@ -187,22 +174,29 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         container_schema = vol.Schema(
             {
-                vol.Optional(CONF_CONTAINERS, default=[]): selector.SelectSelector(
+                vol.Optional(
+                    CONF_CONTAINERS, default=self.data[CONF_CONTAINERS]
+                ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=list(self._docker_api.list_containers()),
                         multiple=True,
                     ),
                 ),
-                # vol.Required(CONF_CONTAINERS_EXCLUDE, default=[]): cv.ensure_list,
-                # vol.Required(CONF_RENAME, default={}): dict,
-                vol.Required(CONF_RENAME_ENITITY, default=False): bool,
+                #
+                # Not relevant as all are selected individually
+                # vol.Required(CONF_CONTAINERS_EXCLUDE, default=self.data[CONF_CONTAINERS_EXCLUDE]): cv.ensure_list,
+                #
+                # Would have to add a bool that activates a seprate form where each container can be renamed
+                # vol.Required(CONF_RENAME, default=self.data[CONF_RENAME]): dict,
+                # vol.Required(
+                #     CONF_RENAME_ENITITY, default=self.data[CONF_RENAME_ENITITY]
+                # ): bool,
             }
         )
 
         return self.async_show_form(
             step_id="containers",
             data_schema=container_schema,
-            # description_placeholders=PLACEHOLDERS,
             errors=errors,
         )
 
@@ -246,24 +240,43 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         multiple=True,
                     ),
                 ),
-                vol.Required(CONF_SENSORNAME, default=DEFAULT_SENSORNAME): str,
-                vol.Required(CONF_SWITCHENABLED, default=True): bool,
-                vol.Required(CONF_SWITCHNAME, default=DEFAULT_SWITCHNAME): str,
-                vol.Required(CONF_BUTTONENABLED, default=False): bool,
-                vol.Required(CONF_BUTTONNAME, default=DEFAULT_BUTTONNAME): str,
-                vol.Required(CONF_MEMORYCHANGE, default=100): int,
-                vol.Required(CONF_PRECISION_CPU, default=PRECISION): int,
-                vol.Required(CONF_PRECISION_MEMORY_MB, default=PRECISION): int,
-                vol.Required(CONF_PRECISION_MEMORY_PERCENTAGE, default=PRECISION): int,
-                vol.Required(CONF_PRECISION_NETWORK_KB, default=PRECISION): int,
-                vol.Required(CONF_PRECISION_NETWORK_MB, default=PRECISION): int,
+                vol.Required(CONF_SENSORNAME, default=self.data[CONF_SENSORNAME]): str,
+                vol.Required(
+                    CONF_SWITCHENABLED, default=self.data[CONF_SWITCHENABLED]
+                ): bool,
+                vol.Required(CONF_SWITCHNAME, default=self.data[CONF_SWITCHNAME]): str,
+                vol.Required(
+                    CONF_BUTTONENABLED, default=self.data[CONF_BUTTONENABLED]
+                ): bool,
+                vol.Required(CONF_BUTTONNAME, default=self.data[CONF_BUTTONNAME]): str,
+                vol.Required(
+                    CONF_MEMORYCHANGE, default=self.data[CONF_MEMORYCHANGE]
+                ): int,
+                vol.Required(
+                    CONF_PRECISION_CPU, default=self.data[CONF_PRECISION_CPU]
+                ): int,
+                vol.Required(
+                    CONF_PRECISION_MEMORY_MB,
+                    default=self.data[CONF_PRECISION_MEMORY_MB],
+                ): int,
+                vol.Required(
+                    CONF_PRECISION_MEMORY_PERCENTAGE,
+                    default=self.data[CONF_PRECISION_MEMORY_PERCENTAGE],
+                ): int,
+                vol.Required(
+                    CONF_PRECISION_NETWORK_KB,
+                    default=self.data[CONF_PRECISION_NETWORK_KB],
+                ): int,
+                vol.Required(
+                    CONF_PRECISION_NETWORK_MB,
+                    default=self.data[CONF_PRECISION_NETWORK_MB],
+                ): int,
             }
         )
 
         return self.async_show_form(
             step_id="conditions",
             data_schema=conditions_schema,
-            # description_placeholders=PLACEHOLDERS,
             errors=errors,
         )
 
