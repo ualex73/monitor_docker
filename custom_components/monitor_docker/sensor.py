@@ -86,20 +86,14 @@ async def async_setup_platform(
         return
 
     instance: str = discovery_info[CONF_NAME]
-    name: str = discovery_info[CONF_NAME]
-    api: DockerAPI = hass.data[DOMAIN][name][API]
-    config: ConfigType = hass.data[DOMAIN][name][CONFIG]
-
-    # Set or overrule prefix
-    prefix = name
-    if config[CONF_PREFIX]:
-        prefix = config[CONF_PREFIX]
+    api: DockerAPI = hass.data[DOMAIN][instance][API]
+    config: ConfigType = hass.data[DOMAIN][instance][CONFIG]
 
     _LOGGER.debug("[%s]: Setting up sensor(s)", instance)
 
     sensors = []
     sensors: list[DockerSensor | DockerContainerSensor] = [
-        DockerSensor(api, instance, prefix, DOCKER_MONITOR_LIST[variable])
+        DockerSensor(api, instance, DOCKER_MONITOR_LIST[variable])
         for variable in config[CONF_MONITORED_CONDITIONS]
         if variable in DOCKER_MONITOR_LIST
         if CONTAINER not in discovery_info
@@ -155,21 +149,12 @@ async def async_setup_platform(
                     ):
                         monitor_conditions += [variable]
 
-                # Only force rename of entityid is requested, to not break backwards compatibility
-                alias_entityid = cname
-                if config[CONF_RENAME_ENITITY]:
-                    alias_entityid = find_rename(config[CONF_RENAME], cname)
-
                 sensors += [
                     DockerContainerSensor(
                         capi,
                         instance=instance,
-                        prefix=prefix,
                         cname=cname,
-                        alias_entityid=alias_entityid,
-                        alias_name=find_rename(config[CONF_RENAME], cname),
                         description=CONTAINER_MONITOR_LIST[CONTAINER_INFO_ALLINONE],
-                        sensor_name_format=config[CONF_SENSORNAME],
                         condition_list=monitor_conditions,
                     )
                 ]
@@ -182,21 +167,12 @@ async def async_setup_platform(
                             and variable not in CONTAINER_MONITOR_NETWORK_LIST
                         )
                     ):
-                        # Only force rename of entityid is requested, to not break backwards compatibility
-                        alias_entityid = cname
-                        if config[CONF_RENAME_ENITITY]:
-                            alias_entityid = find_rename(config[CONF_RENAME], cname)
-
                         sensors += [
                             DockerContainerSensor(
                                 capi,
                                 instance=instance,
-                                prefix=prefix,
                                 cname=cname,
-                                alias_entityid=alias_entityid,
-                                alias_name=find_rename(config[CONF_RENAME], cname),
                                 description=CONTAINER_MONITOR_LIST[variable],
-                                sensor_name_format=config[CONF_SENSORNAME],
                             )
                         ]
 
@@ -219,23 +195,19 @@ class DockerSensor(SensorEntity):
         self,
         api: DockerAPI,
         instance: str,
-        prefix: str,
         description: SensorEntityDescription,
     ):
         """Initialize the sensor."""
 
         self._api = api
         self._instance = instance
-        self._prefix = prefix
 
         self.entity_description = description
 
         self._attr_unique_id: str = ENTITY_ID_FORMAT.format(
-            slugify(f"{self._prefix}_{self.entity_description.name}")
+            slugify(f"{self._instance}_{self.entity_description.name}")
         )
-        self._name = "{name} {sensor}".format(
-            name=self._prefix, sensor=self.entity_description
-        )
+        self._attr_name = f"{self._instance} {self.entity_description.name}"
 
         self._state = None
         self._attributes: dict[str, Any] = {}
@@ -257,11 +229,6 @@ class DockerSensor(SensorEntity):
             self._instance,
             self.entity_description.name,
         )
-
-    # @property
-    # def entity_id(self) -> str:
-    #     """Return the entity id of the sensor."""
-    #     return self._entity_id
 
     @property
     def native_value(self) -> str | None:
@@ -318,20 +285,15 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
         self,
         container: DockerContainerAPI,
         instance: str,
-        prefix: str,
         cname: str,
-        alias_entityid: str,
-        alias_name: str,
         description: SensorEntityDescription,
-        sensor_name_format: str,
         condition_list: list | None = None,
     ):
         """Initialize the sensor."""
-        super().__init__(container, alias_name, instance)
+        super().__init__(container, cname, instance)
 
         self._instance = instance
         self._container = container
-        self._prefix = prefix
         self._cname = cname
         self._condition_list = condition_list
 
@@ -339,24 +301,18 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
 
         if self.entity_description.key == CONTAINER_INFO_ALLINONE:
             self._attr_unique_id = ENTITY_ID_FORMAT.format(
-                slugify(f"{self._prefix}_{alias_entityid}")
+                slugify(f"{self._prefix}_{self._cname}")
             )
             self._attr_name = ENTITY_ID_FORMAT.format(
-                slugify(f"{self._prefix}_{alias_entityid}")
+                slugify(f"{self._prefix}_{self._cname}")
             )
-            self._attr_name = sensor_name_format.format(
-                name=alias_name, sensorname="", sensor=""
-            )
+            self._attr_name = f"{self._instance} {self._cname}".strip()
         else:
             self._attr_unique_id = ENTITY_ID_FORMAT.format(
-                slugify(
-                    f"{self._prefix}_{alias_entityid}_{self.entity_description.name}"
-                )
+                slugify(f"{self._instance}_{cname}_{self.entity_description.name}")
             )
-            self._attr_name = sensor_name_format.format(
-                name=alias_name,
-                sensorname=self.entity_description.name,
-                sensor=self.entity_description.name,
+            self._attr_name = (
+                f"{self._instance} {self._cname} {self.entity_description.name}".strip()
             )
 
         self._state = None

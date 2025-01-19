@@ -114,11 +114,6 @@ async def async_setup_platform(
     api = hass.data[DOMAIN][name][API]
     config = hass.data[DOMAIN][name][CONFIG]
 
-    # Set or overrule prefix
-    prefix = name
-    if config[CONF_PREFIX]:
-        prefix = config[CONF_PREFIX]
-
     # Don't create any butoon if disabled
     if config[CONF_BUTTONENABLED] == False:
         _LOGGER.debug("[%s]: Button(s) are disabled", instance)
@@ -149,20 +144,11 @@ async def async_setup_platform(
             ):
                 _LOGGER.debug("[%s] %s: Adding component Button", instance, cname)
 
-                # Only force rename of entityid is requested, to not break backwards compatibility
-                alias_entityid = cname
-                if config[CONF_RENAME_ENITITY]:
-                    alias_entityid = find_rename(config[CONF_RENAME], cname)
-
                 buttons.append(
                     DockerContainerButton(
                         api.get_container(cname),
                         instance=instance,
-                        prefix=prefix,
                         cname=cname,
-                        alias_entityid=alias_entityid,
-                        alias_name=find_rename(config[CONF_RENAME], cname),
-                        name_format=config[CONF_BUTTONNAME],
                     )
                 )
             else:
@@ -189,34 +175,19 @@ class DockerContainerButton(ButtonEntity, DockerContainerEntity):
         self,
         container: DockerContainerAPI,
         instance: str,
-        prefix: str,
         cname: str,
-        alias_entityid: str,
-        alias_name: str,
-        name_format: str,
     ):
-        super().__init__(container, alias_name, instance)
+        super().__init__(container, cname, instance)
 
         self._container = container
         self._instance = instance
-        self._prefix = prefix
         self._cname = cname
         self._state = False
         self._attr_unique_id = ENTITY_ID_FORMAT.format(
-            slugify(self._prefix + "_" + self._cname + "_restart")
+            slugify(f"{self._prefix}_{self._cname}_restart")
         )
-        self._name = name_format.format(name=alias_name)
+        self._attr_name = f"{self._prefix} {self._cname} Restart"
         self._removed = False
-
-    # @property
-    # def entity_id(self) -> str:
-    #     """Return the entity id of the button."""
-    #     return self._entity_id
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return self._name
 
     @property
     def should_poll(self) -> bool:
