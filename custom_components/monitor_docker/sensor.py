@@ -214,12 +214,13 @@ class DockerSensor(SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{self._instance}_{self._api.get_url()}")},
             name=self._instance,
-            model=api_info.get(ATTR_VERSION_OS),
+            model="Docker Host",
             manufacturer="Docker",
-            model_id=api_info.get(ATTR_VERSION_KERNEL),
             sw_version=api_info.get(DOCKER_INFO_VERSION),
             entry_type=DeviceEntryType.SERVICE,
         )
+        #identifiers={"os": api_info.get(ATTR_VERSION_OS)},
+        #    model_id=api_info.get(ATTR_VERSION_KERNEL),
 
         _LOGGER.info(
             "[%s]: Initializing Docker sensor '%s'",

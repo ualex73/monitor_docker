@@ -118,9 +118,12 @@ class DockerAPI:
             self._retry_interval,
         )
 
-    async def init(self, startCount=0) -> bool:
+    #############################################################
+    async def init(self, startCount: int = 0, setup: bool = False) -> bool:
         # Set to None when called twice, etc
         self._api = None
+
+        _LOGGER.debug("[%s]: DockerAPI init()", self._instance)
 
         try:
             # Try to fix unix:// to unix:/// (3 are required by aiodocker)
@@ -259,14 +262,22 @@ class DockerAPI:
 
         return True
 
+    #############################################################
     async def run(self):
+
+        _LOGGER.debug("[%s]: DockerAPI run()", self._instance)
+
         for container in self._containers.values():
             _LOGGER.debug(
                 "[%s] %s: Container monitored", self._instance, container._name
             )
             await container.init()
 
+    #############################################################
     async def load(self):
+
+        _LOGGER.debug("[%s]: DockerAPI load()", self._instance)
+
         for component in COMPONENTS:
             load_platform(
                 self._hass,
@@ -275,6 +286,39 @@ class DockerAPI:
                 {CONF_NAME: self._instance},
                 self._config,
             )
+
+    #############################################################
+    async def destroy(self) -> None:
+        """Destroy the DockerAPI and its containers."""
+
+        # Cancel all main tasks
+        for key in self._tasks:
+            try:
+                _LOGGER.debug("[%s]: Cancelling task '%s'", self._instance, key)
+                result = self._tasks[key].cancel()
+                _LOGGER.debug(
+                    "[%s]: Cancelled task '%s' result=%s", self._instance, key, result
+                )
+            except Exception as err:
+                _LOGGER.error(
+                    "[%s]: Cancelling task '%s' FAILED '%s'",
+                    self._instance,
+                    key,
+                    str(err),
+                )
+                pass
+
+        # Cancel the containers
+
+        for container in self._containers.values():
+            _LOGGER.debug(
+                "[%s] %s: Container cancelled", self._instance, container._name
+            )
+            await container.destroy()
+            # TBD clear container from list?
+
+        # Clear api value
+        # self._api = None
 
     #############################################################
     def _docker_ssl_context(self) -> ssl.SSLContext | None:
@@ -866,6 +910,9 @@ class DockerContainerAPI:
         # During start-up we will wait on container attachment,
         # preventing concurrency issues the main HA loop (we are
         # othside that one with our threads)
+
+        _LOGGER.debug("[%s] %s: DockerContainerAPI init()", self._instance, self._name)
+
         if self._atInit:
             try:
                 self._container = await self._api.containers.get(self._name)
@@ -912,6 +959,30 @@ class DockerContainerAPI:
         self._task = asyncio.create_task(self._run())
 
         return True
+
+    #############################################################
+    async def destroy(self) -> None:
+
+        if self._task:
+            try:
+                _LOGGER.debug("[%s] %s: Cancelling task", self._instance, self._name)
+                result = self._task.cancel()
+                _LOGGER.debug(
+                    "[%s] %s: Cancelled task result=%s",
+                    self._instance,
+                    self._name,
+                    result,
+                )
+            except Exception as err:
+                _LOGGER.error(
+                    "[%s] %s: Cancelling task FAILED '%s'",
+                    self._instance,
+                    self._name,
+                    str(err),
+                )
+                pass
+        else:
+            _LOGGER.error("[%s] %s: No task to cancel", self._instance, self._name)
 
     #############################################################
     async def _run(self) -> None:
@@ -1572,12 +1643,10 @@ class DockerContainerEntity(Entity):
         """Initialize the base for Container entities."""
         container_info = container.get_info()
         self._attr_device_info = DeviceInfo(
-            identifiers={
-                (DOMAIN, f"{instance}_{container_info.get(CONTAINER_INFO_IMAGE)}")
-            },
+            identifiers={(DOMAIN, f"{instance}_container_{cname}")},
             name=cname,
-            manufacturer=str(container_info.get(CONTAINER_INFO_IMAGE)).split("/")[0],
-            # model_id=container_info.get(),    # Not available
+            manufacturer="Docker",
+            model="Docker Container",
             entry_type=DeviceEntryType.SERVICE,
-            via_device=(DOMAIN, f"{instance}_{container.get_api().docker_host}"),
+            via_device=(DOMAIN, f"{instance}_{container._config[CONF_URL]}"),
         )
