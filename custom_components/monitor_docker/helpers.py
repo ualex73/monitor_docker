@@ -77,11 +77,13 @@ _LOGGER = logging.getLogger(__name__)
 
 def toKB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to kBytes."""
+    precision = None if precision == 0 else precision
     return round(value / (1024**1), precision)
 
 
 def toMB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to MBytes."""
+    precision = None if precision == 0 else precision
     return round(value / (1024**2), precision)
 
 
