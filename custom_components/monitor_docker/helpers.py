@@ -69,7 +69,7 @@ from .const import (
     PRECISION,
 )
 
-VERSION = "1.20b2"
+VERSION = "1.20b3"
 
 _LOGGER = logging.getLogger(__name__)
 
