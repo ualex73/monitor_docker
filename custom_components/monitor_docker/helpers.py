@@ -1567,7 +1567,7 @@ class DockerContainerEntity(Entity):
     """Generic entity functions."""
 
     def __init__(
-        self, container: DockerContainerAPI, alias_name: str, instance: str
+        self, container: DockerContainerAPI, instance: str, cname: str
     ) -> None:
         """Initialize the base for Container entities."""
         container_info = container.get_info()
@@ -1575,7 +1575,7 @@ class DockerContainerEntity(Entity):
             identifiers={
                 (DOMAIN, f"{instance}_{container_info.get(CONTAINER_INFO_IMAGE)}")
             },
-            name=alias_name,
+            name=cname,
             manufacturer=str(container_info.get(CONTAINER_INFO_IMAGE)).split("/")[0],
             # model_id=container_info.get(),    # Not available
             entry_type=DeviceEntryType.SERVICE,

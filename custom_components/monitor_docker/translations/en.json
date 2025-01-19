@@ -24,22 +24,18 @@
             "user": {
                 "description": "Setup a connection to docker host",
                 "data": {
-                    "name": "Client name of Docker daemon",
-                    "prefix": "Prefix for entities",
+                    "name": "Name of Docker daemon",
                     "url": "Host URL of Docker daemon",
                     "scan_interval": "Update interval (seconds)",
                     "certpath": "If a TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be cert.pem and key.pem",
-                    "retry": "Number of retries before failing connection"
+                    "retry": "Retry interval (seconds)"
                 }
             },
             "containers": {
                 "description": "Select which containers to monitor",
                 "data": {
                     "containers": "Array of containers to monitor (keep empty to add all, and new)",
-                    "containers_exclude": "Array of containers to be excluded from monitoring, when all containers are included",
-                    "rename_containers": "Open i extra dialog with the possibility to rename selected containers",
-                    "rename": "Dictionary of containers to rename. Renaming is done on the name in HA Lovelace, not entity name",
-                    "rename_entity": "If rename is done, it changes also the entity name"
+                    "containers_exclude": "Array of containers to be excluded from monitoring, when all containers are included"
                 }
             },
             "containers_rename": {
@@ -53,11 +49,8 @@
                 "data": {
                     "monitored_docker_conditions": "Conditions of the controller to be monitored",
                     "monitored_container_conditions": "Conditions of each container to be monitored",
-                    "sensor_name": "Sensor string to format the name used in Home Assistant",
                     "switchenabled": "Enable/Disable the switch entity for containers",
-                    "switchname": "Switch string to format the name used in Home Assistant",
                     "buttonenabled": "Enable/Disable the button entity for containers",
-                    "buttonname": "Button string to format the name used in Home Assistant",
                     "memorychange": "Change of memory usage before alerting",
                     "precision_cpu": "Precision of CPU usage percentage",
                     "precision_memory_mb": "Precision of memory usage in MB",

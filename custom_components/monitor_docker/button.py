@@ -23,11 +23,8 @@ from .const import (
     ATTR_SERVER,
     CONF_CONTAINERS,
     CONF_CONTAINERS_EXCLUDE,
-    CONF_PREFIX,
     CONF_RENAME,
-    CONF_RENAME_ENITITY,
     CONF_BUTTONENABLED,
-    CONF_BUTTONNAME,
     CONFIG,
     CONTAINER,
     CONTAINER_INFO_STATE,
@@ -184,9 +181,9 @@ class DockerContainerButton(ButtonEntity, DockerContainerEntity):
         self._cname = cname
         self._state = False
         self._attr_unique_id = ENTITY_ID_FORMAT.format(
-            slugify(f"{self._prefix}_{self._cname}_restart")
+            slugify(f"{self._instance}_{self._cname}_restart")
         )
-        self._attr_name = f"{self._prefix} {self._cname} Restart"
+        self._attr_name = f"{self._instance} {self._cname} Restart"
         self._removed = False
 
     @property

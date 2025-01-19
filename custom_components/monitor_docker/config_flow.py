@@ -19,7 +19,6 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_BUTTONENABLED,
-    CONF_BUTTONNAME,
     CONF_CERTPATH,
     CONF_CONTAINERS,
     CONF_CONTAINERS_EXCLUDE,
@@ -31,11 +30,7 @@ from .const import (
     CONF_PRECISION_MEMORY_PERCENTAGE,
     CONF_PRECISION_NETWORK_KB,
     CONF_PRECISION_NETWORK_MB,
-    CONF_PREFIX,
-    CONF_RENAME,
-    CONF_RENAME_ENITITY,
     CONF_RETRY,
-    CONF_SENSORNAME,
     CONF_SWITCHENABLED,
     CONF_SWITCHNAME,
     CONTAINER_MONITOR_LIST,
@@ -55,8 +50,6 @@ from .helpers import DockerAPI
 
 _LOGGER = logging.getLogger(__name__)
 
-CONF_RENAME_CONTAINERS = "rename_containers"
-
 
 class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Docker config flow."""
@@ -65,7 +58,6 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     data = {
         # User
         CONF_NAME: DEFAULT_NAME,
-        CONF_PREFIX: "",
         CONF_URL: "",
         CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
         CONF_CERTPATH: "",
@@ -73,15 +65,10 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Containers
         CONF_CONTAINERS: [],
         CONF_CONTAINERS_EXCLUDE: [],  # Not relevant as all are selected
-        CONF_RENAME: {},
-        CONF_RENAME_ENITITY: False,
         # Conditions
         CONF_MONITORED_CONDITIONS: [],
-        CONF_SENSORNAME: DEFAULT_SENSORNAME,
         CONF_SWITCHENABLED: True,
-        CONF_SWITCHNAME: DEFAULT_SWITCHNAME,
         CONF_BUTTONENABLED: False,
-        CONF_BUTTONNAME: DEFAULT_BUTTONNAME,
         CONF_MEMORYCHANGE: 100,
         CONF_PRECISION_CPU: PRECISION,
         CONF_PRECISION_MEMORY_MB: PRECISION,
@@ -94,7 +81,6 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     _reauth_entry: config_entries.ConfigEntry | None = None
     _docker_conditions = DOCKER_PRE_SELECTION
     _container_conditions = CONTAINER_PRE_SELECTION
-    _rename_containers = False
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -148,7 +134,6 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         user_schema = vol.Schema(
             {
                 vol.Required(CONF_NAME, default=self.data[CONF_NAME]): str,
-                vol.Optional(CONF_PREFIX, default=self.data[CONF_PREFIX]): str,
                 vol.Optional(CONF_URL, default=self.data[CONF_URL]): str,
                 vol.Required(
                     CONF_SCAN_INTERVAL, default=self.data[CONF_SCAN_INTERVAL]
@@ -171,12 +156,7 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            self._rename_containers = user_input.pop(CONF_RENAME_CONTAINERS)
-            self.data.update(user_input)
-            if not errors:
-                if self._rename_containers:
-                    return await self.async_step_containers_rename()
-                return await self.async_step_conditions()
+            return await self.async_step_conditions()
 
         container_schema = vol.Schema(
             {
@@ -187,57 +167,12 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         options=list(self._docker_api.list_containers()),
                         multiple=True,
                     ),
-                ),
-                vol.Required(
-                    CONF_RENAME_CONTAINERS, default=self._rename_containers
-                ): bool,
+                )
             }
         )
 
         return self.async_show_form(
             step_id="containers",
-            data_schema=container_schema,
-            errors=errors,
-        )
-
-    async def async_step_containers_rename(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle user step."""
-        errors = {}
-
-        if user_input is not None:
-            # self.data.update(user_input)
-            self.data[CONF_RENAME_ENITITY] = user_input.pop(CONF_RENAME_ENITITY)
-            for container in self.data[CONF_CONTAINERS]:
-                self.data[CONF_RENAME][container] = name = user_input.pop(container)
-                if name in [
-                    v for k, v in self.data[CONF_RENAME].items() if k != container
-                ]:
-                    errors["base"] = "duplicate_names"
-                    self.data[CONF_RENAME].pop(container)
-            if not errors:
-                return await self.async_step_conditions()
-
-        container_schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_RENAME_ENITITY, default=self.data[CONF_RENAME_ENITITY]
-                ): bool
-            }
-        )
-        for container in self.data[CONF_CONTAINERS]:
-            container_schema = container_schema.extend(
-                {
-                    vol.Required(
-                        container,
-                        default=self.data[CONF_RENAME].get(container, container),
-                    ): str
-                }
-            )
-
-        return self.async_show_form(
-            step_id="containers_rename",
             data_schema=container_schema,
             errors=errors,
         )
@@ -282,15 +217,12 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         multiple=True,
                     ),
                 ),
-                vol.Required(CONF_SENSORNAME, default=self.data[CONF_SENSORNAME]): str,
                 vol.Required(
                     CONF_SWITCHENABLED, default=self.data[CONF_SWITCHENABLED]
                 ): bool,
-                vol.Required(CONF_SWITCHNAME, default=self.data[CONF_SWITCHNAME]): str,
                 vol.Required(
                     CONF_BUTTONENABLED, default=self.data[CONF_BUTTONENABLED]
                 ): bool,
-                vol.Required(CONF_BUTTONNAME, default=self.data[CONF_BUTTONNAME]): str,
                 vol.Required(
                     CONF_MEMORYCHANGE, default=self.data[CONF_MEMORYCHANGE]
                 ): int,

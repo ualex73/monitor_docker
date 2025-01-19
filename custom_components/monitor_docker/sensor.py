@@ -29,10 +29,6 @@ from .const import (
     ATTR_VERSION_OS_TYPE,
     CONF_CONTAINERS,
     CONF_CONTAINERS_EXCLUDE,
-    CONF_PREFIX,
-    CONF_RENAME,
-    CONF_RENAME_ENITITY,
-    CONF_SENSORNAME,
     CONFIG,
     CONTAINER,
     CONTAINER_INFO_ALLINONE,
@@ -291,7 +287,7 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
         condition_list: list | None = None,
     ):
         """Initialize the sensor."""
-        super().__init__(container, cname, instance)
+        super().__init__(container, instance, cname)
 
         self._instance = instance
         self._container = container
@@ -302,12 +298,9 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
 
         if self.entity_description.key == CONTAINER_INFO_ALLINONE:
             self._attr_unique_id = ENTITY_ID_FORMAT.format(
-                slugify(f"{self._prefix}_{self._cname}")
+                slugify(f"{self._instance}_{self._cname}_allinone")
             )
-            self._attr_name = ENTITY_ID_FORMAT.format(
-                slugify(f"{self._prefix}_{self._cname}")
-            )
-            self._attr_name = f"{self._instance} {self._cname}".strip()
+            self._attr_name = f"{self._instance} {self._cname} AllInOne".strip()
         else:
             self._attr_unique_id = ENTITY_ID_FORMAT.format(
                 slugify(f"{self._instance}_{cname}_{self.entity_description.name}")
