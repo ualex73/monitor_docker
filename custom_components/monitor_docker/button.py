@@ -174,7 +174,7 @@ class DockerContainerButton(ButtonEntity, DockerContainerEntity):
         instance: str,
         cname: str,
     ):
-        super().__init__(container, cname, instance)
+        super().__init__(container, instance, cname)
 
         self._container = container
         self._instance = instance
