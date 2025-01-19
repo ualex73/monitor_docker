@@ -44,6 +44,7 @@ from .const import (
     CONTAINER,
     CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_IMAGE,
+    CONTAINER_INFO_IMAGE_HASH,
     CONTAINER_INFO_NETWORK_AVAILABLE,
     CONTAINER_INFO_STATE,
     CONTAINER_INFO_STATUS,
@@ -70,7 +71,7 @@ from .const import (
     PRECISION,
 )
 
-VERSION = "1.20b2"
+VERSION = "1.20b3"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1005,6 +1006,7 @@ class DockerContainerAPI:
 
         self._info[CONTAINER_INFO_STATE] = raw["State"]["Status"]
         self._info[CONTAINER_INFO_IMAGE] = raw["Config"]["Image"]
+        self._info[CONTAINER_INFO_IMAGE_HASH] = raw["Image"]
 
         if self._network_error <= 5:
             if CONTAINER_INFO_NETWORK_AVAILABLE not in self._info:

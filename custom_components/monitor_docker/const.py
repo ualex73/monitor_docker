@@ -71,6 +71,7 @@ CONTAINER_INFO_STATUS = "status"
 CONTAINER_INFO_NETWORK_AVAILABLE = "network_available"
 CONTAINER_INFO_UPTIME = "uptime"
 CONTAINER_INFO_IMAGE = "image"
+CONTAINER_INFO_IMAGE_HASH = "image_hash"
 CONTAINER_STATS_CPU_PERCENTAGE = "cpu_percentage"
 CONTAINER_STATS_1CPU_PERCENTAGE = "1cpu_percentage"
 CONTAINER_STATS_MEMORY = "memory"
@@ -176,6 +177,11 @@ CONTAINER_MONITOR_LIST = {
         key=CONTAINER_INFO_IMAGE,
         name="Image",
         icon="mdi:information-outline",
+    ),
+    CONTAINER_INFO_IMAGE_HASH: SensorEntityDescription(
+        key=CONTAINER_INFO_IMAGE_HASH,
+        name="Image Hash",
+        icon="mdi:pound-box-outline",
     ),
     CONTAINER_STATS_CPU_PERCENTAGE: SensorEntityDescription(
         key=CONTAINER_STATS_CPU_PERCENTAGE,

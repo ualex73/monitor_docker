@@ -38,6 +38,7 @@ from .const import (
     CONTAINER_INFO_ALLINONE,
     CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_IMAGE,
+    CONTAINER_INFO_IMAGE_HASH,
     CONTAINER_INFO_NETWORK_AVAILABLE,
     CONTAINER_INFO_STATE,
     CONTAINER_INFO_STATUS,
@@ -423,6 +424,7 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
                     if cond in [
                         CONTAINER_INFO_STATUS,
                         CONTAINER_INFO_IMAGE,
+                        CONTAINER_INFO_IMAGE_HASH,
                         CONTAINER_INFO_HEALTH,
                         CONTAINER_INFO_UPTIME,
                     ]:
@@ -435,6 +437,7 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
             elif self.entity_description.key in [
                 CONTAINER_INFO_STATE,
                 CONTAINER_INFO_IMAGE,
+                CONTAINER_INFO_IMAGE_HASH,
                 CONTAINER_INFO_HEALTH,
             ]:
                 state = info.get(self.entity_description.key)
