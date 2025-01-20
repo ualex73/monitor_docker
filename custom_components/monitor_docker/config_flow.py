@@ -164,6 +164,37 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
+        """Handle reconfigure step."""
+        entry_id = self.context["entry_id"]
+        config_entry = await self.hass.config_entries.async_get_entry(entry_id)
+        self.hass.data[DOMAIN][entry[CONF_NAME]][API]
+        hass.data[DOMAIN][entry[CONF_NAME]][API]
+
+        return self.async_show_menu(
+            step_id="reconfigure",
+            menu_options=["containers", "conditions"],
+            # description_placeholders={
+            #     "model": "Example model",
+            # }
+        )
+
+        if user_input is not None:
+            # TODO: process user input
+            self.async_set_unique_id(user_id)
+            self._abort_if_unique_id_mismatch()
+            return self.async_update_reload_and_abort(
+                self._get_reconfigure_entry(),
+                data_updates=data,
+            )
+
+        return await self.async_step_containers()
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema({vol.Required("input_parameter"): str}),
+        )
+
     async def async_step_containers(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -176,6 +207,8 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not errors:
                 if self._rename_containers:
                     return await self.async_step_containers_rename()
+                if self.source == config_entries.SOURCE_RECONFIGURE:
+                    return None
                 return await self.async_step_conditions()
 
         container_schema = vol.Schema(
@@ -217,6 +250,8 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "duplicate_names"
                     self.data[CONF_RENAME].pop(container)
             if not errors:
+                if self.source == config_entries.SOURCE_RECONFIGURE:
+                    return None
                 return await self.async_step_conditions()
 
         container_schema = vol.Schema(
@@ -259,6 +294,8 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.data[CONF_MONITORED_CONDITIONS] = (
                     self._docker_conditions + self._container_conditions
                 )
+                if self.source == config_entries.SOURCE_RECONFIGURE:
+                    return None
                 return self.async_create_entry(
                     title=self.data[CONF_NAME], data=self.data
                 )
