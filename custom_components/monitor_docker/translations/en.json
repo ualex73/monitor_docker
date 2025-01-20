@@ -70,6 +70,9 @@
         "error": {
             "name_exists": "Name already exists",
             "invalid_connection": "Could not connect to Docker"
+        },
+        "abort": {
+            "reauth_successful": "Reconfiguration successful"
         }
     }
 }

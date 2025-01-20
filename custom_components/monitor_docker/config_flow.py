@@ -79,7 +79,7 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     }
     options = None
     _docker_api = None
-    _reauth_entry: config_entries.ConfigEntry | None = None
+    _config_entry: config_entries.ConfigEntry | None = None
     _docker_conditions = DOCKER_PRE_SELECTION
     _container_conditions = CONTAINER_PRE_SELECTION
 
@@ -100,7 +100,7 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             await self.async_set_unique_id(user_input[CONF_NAME])
 
-            if not self._reauth_entry:
+            if not self._config_entry:
                 self._abort_if_unique_id_configured()
 
             # Convert some user_input data as preparation to calling API
@@ -118,19 +118,19 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             if not errors:
                 self.data.update(user_input)
-                # if self._reauth_entry:
+                # if self._config_entry:
                 #     self.hass.config_entries.async_update_entry(
-                #         self._reauth_entry, data=self._reauth_entry.data | user_input
+                #         self._config_entry, data=self._config_entry.data | user_input
                 #     )
                 #     await self.hass.config_entries.async_reload(
-                #         self._reauth_entry.entry_id
+                #         self._config_entry.entry_id
                 #     )
                 #     return self.async_abort(reason="reauth_successful")
                 return await self.async_step_containers()
 
-        # elif self._reauth_entry:
+        # elif self._config_entry:
         #     for key in defaults:
-        #         defaults[key] = self._reauth_entry.data.get(key)
+        #         defaults[key] = self._config_entry.data.get(key)
 
         user_schema = vol.Schema(
             {
@@ -152,10 +152,15 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
         """Handle reconfigure step."""
-        entry_id = self.context["entry_id"]
-        config_entry = self.hass.config_entries.async_get_entry(entry_id)
-        self.data = {**config_entry.data}
-        self._docker_api = self.hass.data[DOMAIN][config_entry.data[CONF_NAME]][API]
+        self._config_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        if self._config_entry is None:
+            return self.async_abort(reason="reconfigure_failed")
+        self.data = {**self._config_entry.data}
+        self._docker_api = self.hass.data[DOMAIN][self._config_entry.data[CONF_NAME]][
+            API
+        ]
 
         return self.async_show_menu(
             step_id="reconfigure",
@@ -171,11 +176,11 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self.data.update(user_input)
             if self.source == config_entries.SOURCE_RECONFIGURE:
-                self.async_set_unique_id(self.data[CONF_NAME])
-                self._abort_if_unique_id_mismatch()
+                # self.async_set_unique_id(self.data[CONF_NAME])
+                # self._abort_if_unique_id_mismatch()
                 return self.async_update_reload_and_abort(
-                    self._get_reconfigure_entry(),
-                    data_updates=self.data,
+                    self._config_entry,
+                    data=self.data,
                 )
             return await self.async_step_conditions()
 
@@ -216,7 +221,12 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self._docker_conditions + self._container_conditions
                 )
                 if self.source == config_entries.SOURCE_RECONFIGURE:
-                    return None
+                    # self.async_set_unique_id(self.data[CONF_NAME])
+                    # self._abort_if_unique_id_mismatch()
+                    return self.async_update_reload_and_abort(
+                        self._config_entry,
+                        data=self.data,
+                    )
                 return self.async_create_entry(
                     title=self.data[CONF_NAME], data=self.data
                 )
@@ -283,7 +293,7 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     # async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
     #     """Perform reauth upon an API authentication error."""
-    #     self._reauth_entry = self.hass.config_entries.async_get_entry(
+    #     self._config_entry = self.hass.config_entries.async_get_entry(
     #         self.context["entry_id"]
     #     )
     #     return await self.async_step_user()
