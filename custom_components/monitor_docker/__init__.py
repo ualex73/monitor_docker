@@ -262,6 +262,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
 
 #################################################################
+async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
+    """Unload a config entry."""
+    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+
+
+#################################################################
 async def async_reset_platform(hass: HomeAssistant, integration_name: str) -> None:
     """Reload the integration."""
     if DOMAIN not in hass.data:

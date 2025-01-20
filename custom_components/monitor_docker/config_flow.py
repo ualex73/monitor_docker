@@ -226,6 +226,7 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return self.async_update_reload_and_abort(
                         self._config_entry,
                         data=self.data,
+                        reason="reconfigure_successful",
                     )
                 return self.async_create_entry(
                     title=self.data[CONF_NAME], data=self.data

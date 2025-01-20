@@ -72,7 +72,8 @@
             "invalid_connection": "Could not connect to Docker"
         },
         "abort": {
-            "reauth_successful": "Reconfiguration successful"
+            "reauth_successful": "Reauthorization successful",
+            "reconfigure_successful": "Reconfiguration successful"
         }
     }
 }
