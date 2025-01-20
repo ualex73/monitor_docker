@@ -31,6 +31,13 @@
                     "retry": "Retry interval (seconds)"
                 }
             },
+            "reconfigure": {
+                "description": "Reconfigure settings of Docker daemon",
+                "menu_options": {
+                    "containers": "Containers to monitor",
+                    "conditions": "Conditions to monitor"
+                }
+            },
             "containers": {
                 "description": "Select which containers to monitor",
                 "data": {

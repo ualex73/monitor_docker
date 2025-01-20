@@ -11,6 +11,7 @@ from typing import Any, Callable
 
 import aiodocker
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 import homeassistant.util.dt as dt_util
@@ -925,7 +926,9 @@ class DockerContainerAPI:
                     str(err),
                     exc_info=exc_info,
                 )
-                return
+                return  # For now do not activate Reauthentication flow
+                # https://developers.home-assistant.io/docs/config_entries_config_flow_handler#reauthentication
+                raise ConfigEntryAuthFailed(err) from err
 
             self._task = asyncio.create_task(self._run())
 

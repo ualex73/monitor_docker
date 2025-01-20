@@ -18,6 +18,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import (
+    API,
     CONF_BUTTONENABLED,
     CONF_CERTPATH,
     CONF_CONTAINERS,
@@ -149,6 +150,18 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
+        """Handle reconfigure step."""
+        entry_id = self.context["entry_id"]
+        config_entry = self.hass.config_entries.async_get_entry(entry_id)
+        self.data = {**config_entry.data}
+        self._docker_api = self.hass.data[DOMAIN][config_entry.data[CONF_NAME]][API]
+
+        return self.async_show_menu(
+            step_id="reconfigure",
+            menu_options=["containers", "conditions"],
+        )
+
     async def async_step_containers(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -156,6 +169,14 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
+            self.data.update(user_input)
+            if self.source == config_entries.SOURCE_RECONFIGURE:
+                self.async_set_unique_id(self.data[CONF_NAME])
+                self._abort_if_unique_id_mismatch()
+                return self.async_update_reload_and_abort(
+                    self._get_reconfigure_entry(),
+                    data_updates=self.data,
+                )
             return await self.async_step_conditions()
 
         container_schema = vol.Schema(
@@ -194,6 +215,8 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.data[CONF_MONITORED_CONDITIONS] = (
                     self._docker_conditions + self._container_conditions
                 )
+                if self.source == config_entries.SOURCE_RECONFIGURE:
+                    return None
                 return self.async_create_entry(
                     title=self.data[CONF_NAME], data=self.data
                 )
