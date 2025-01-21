@@ -120,7 +120,7 @@ class DockerAPI:
         )
 
     #############################################################
-    async def init(self, startCount: int = 0, setup: bool = False) -> bool:
+    async def init(self, startCount: int = 0) -> bool:
         # Set to None when called twice, etc
         self._api = None
 
@@ -153,10 +153,10 @@ class DockerAPI:
             ssl_context = None
 
             if url is not None:
-                _LOGGER.debug("%s: Docker URL is '%s'", self._instance, url)
+                _LOGGER.debug("[%s]: Docker URL is '%s'", self._instance, url)
             else:
                 _LOGGER.debug(
-                    "%s: Docker URL is auto-detect (most likely using 'unix://var/run/docker.socket')",
+                    "[%s]: Docker URL is auto-detect (most likely using 'unix://var/run/docker.socket')",
                     self._instance,
                 )
 
@@ -234,32 +234,16 @@ class DockerAPI:
         # Pre 19.03 support memory calculation is dropped
         _LOGGER.debug("[%s]: Docker version: %s", self._instance, version)
 
-        # Start task to monitor events of create/delete/start/stop
-        self._tasks["events"] = asyncio.create_task(self._run_docker_events())
-
-        # Start task to monitor total/running containers
-        self._tasks["info"] = asyncio.create_task(self._run_docker_info())
-
         # Get the list of containers to monitor
         containers = await self._api.containers.list(all=True)
 
+        # We only store names, we do not initialize them. This happens in run()
         for container in containers or []:
             # Determine name from Docker API, it contains an array with a slash
             cname: str = container._container["Names"][0][1:]
 
-            # We will monitor all containers, including excluded ones.
-            # This is needed to get total CPU/Memory usage.
-            _LOGGER.debug("[%s] %s: Container added", self._instance, cname)
-
-            # Create our Docker Container API
-            self._containers[cname] = DockerContainerAPI(
-                self._config,
-                self._api,
-                cname,
-            )
-            # await self._containers[cname].init()
-
-        self._hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
+            # Add container name to the list
+            self._containers[cname] = None
 
         return True
 
@@ -268,11 +252,35 @@ class DockerAPI:
 
         _LOGGER.debug("[%s]: DockerAPI run()", self._instance)
 
-        for container in self._containers.values():
-            _LOGGER.debug(
-                "[%s] %s: Container monitored", self._instance, container._name
+        # Start task to monitor events of create/delete/start/stop
+        if "events" not in self._tasks:
+            self._tasks["events"] = asyncio.create_task(self._run_docker_events())
+
+        # Start task to monitor total/running containers
+        if "info" not in self._tasks:
+            self._tasks["info"] = asyncio.create_task(self._run_docker_info())
+
+        # Loop through containers and do it
+        for cname in self._containers:
+
+            # Skip already initialized containers
+            if self._containers[cname]:
+                continue
+
+            # We will monitor all containers, including excluded ones.
+            # This is needed to get total CPU/Memory usage.
+
+            _LOGGER.debug("[%s] %s: Container monitored", self._instance, cname)
+
+            # Create our Docker Container API
+            self._containers[cname] = DockerContainerAPI(
+                self._config,
+                self._api,
+                cname,
             )
-            await container.init()
+            await self._containers[cname].init()
+
+        self._hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
 
     #############################################################
     async def load(self):
@@ -1637,6 +1645,7 @@ class DockerContainerAPI:
         )
 
 
+#################################################################
 class DockerContainerEntity(Entity):
     """Generic entity functions."""
 
