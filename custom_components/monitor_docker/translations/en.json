@@ -31,6 +31,13 @@
                     "retry": "Retry interval (seconds)"
                 }
             },
+            "reconfigure": {
+                "description": "Reconfigure settings of Docker daemon",
+                "menu_options": {
+                    "containers": "Containers to monitor",
+                    "conditions": "Conditions to monitor"
+                }
+            },
             "containers": {
                 "description": "Select which containers to monitor",
                 "data": {
@@ -63,6 +70,10 @@
         "error": {
             "name_exists": "Name already exists",
             "invalid_connection": "Could not connect to Docker"
+        },
+        "abort": {
+            "reauth_successful": "Reauthorization successful",
+            "reconfigure_successful": "Reconfiguration successful"
         }
     }
 }

@@ -248,17 +248,24 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     #         [CONTAINER_INFO_ALLINONE]
     #     )
 
-    if config_entry.data[CONF_NAME] in hass.data[DOMAIN]:
-        _LOGGER.error(
-            "Instance %s is duplicate, please assign an unique name",
-            config_entry.data[CONF_NAME],
-        )
-        return False
+    # Will not work with reconfigure since it will have the same name, and unique name is already ensured in config_flow
+    # if config_entry.data[CONF_NAME] in hass.data[DOMAIN]:
+    #     _LOGGER.error(
+    #         "Instance %s is duplicate, please assign an unique name",
+    #         config_entry.data[CONF_NAME],
+    #     )
+    #     return False
 
     # Each docker hosts runs in its own thread. We need to pass hass too, for the load_platform
     asyncio.create_task(RunDocker(hass, config_entry.data))
 
     return True
+
+
+#################################################################
+async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
+    """Unload a config entry."""
+    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
 
 
 #################################################################
