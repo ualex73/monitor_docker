@@ -299,6 +299,12 @@ class DockerConfigFlow(ConfigFlow, domain=DOMAIN):
         self, import_info: Mapping[str, Any]
     ) -> ConfigFlowResult:
         """Import config from configuration.yaml."""
-        pass
         _LOGGER.debug("Starting async_step_import - %s", import_info)
-        return await self.async_step_user(import_info)
+        if import_info[CONF_URL] == "":
+            import_info[CONF_URL] = None
+        await self.async_set_unique_id(import_info[CONF_NAME])
+        self._abort_if_unique_id_configured()
+        for key, value in import_info.items():
+            if key in self.data:
+                self.data[key] = value
+        return self.async_create_entry(title=self.data[CONF_NAME], data=self.data)
