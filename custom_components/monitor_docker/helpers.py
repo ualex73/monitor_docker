@@ -934,8 +934,6 @@ class DockerContainerAPI:
                     str(err),
                     exc_info=exc_info,
                 )
-                return  # For now do not activate Reauthentication flow
-                # https://developers.home-assistant.io/docs/config_entries_config_flow_handler#reauthentication
                 raise ConfigEntryAuthFailed(err) from err
 
             self._task = asyncio.create_task(self._run())
