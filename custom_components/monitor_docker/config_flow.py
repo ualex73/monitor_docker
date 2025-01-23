@@ -295,13 +295,10 @@ class DockerConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    # async def async_step_import(self, import_data) -> FlowResult:
-    #     """Import config from configuration.yaml."""
-    #     return await self.async_step_user(import_data)
-
-    # async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
-    #     """Perform reauth upon an API authentication error."""
-    #     self._config_entry = self.hass.config_entries.async_get_entry(
-    #         self.context["entry_id"]
-    #     )
-    #     return await self.async_step_user()
+    async def async_step_import(
+        self, import_info: Mapping[str, Any]
+    ) -> ConfigFlowResult:
+        """Import config from configuration.yaml."""
+        pass
+        _LOGGER.debug("Starting async_step_import - %s", import_info)
+        return await self.async_step_user(import_info)
