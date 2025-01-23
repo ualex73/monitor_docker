@@ -21,7 +21,7 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_URL,
 )
-from homeassistant.helpers import selector
+from homeassistant.helpers import issue_registry as ir, selector
 
 from .const import (
     API,
@@ -303,8 +303,22 @@ class DockerConfigFlow(ConfigFlow, domain=DOMAIN):
         if import_info[CONF_URL] == "":
             import_info[CONF_URL] = None
         await self.async_set_unique_id(import_info[CONF_NAME])
+        ir.async_create_issue(
+            hass=self.hass,
+            domain=DOMAIN,
+            issue_id=f"remove_configuration_yaml_{import_info[CONF_NAME]}",
+            is_fixable=True,
+            is_persistent=True,
+            issue_domain=DOMAIN,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="remove_configuration_yaml",
+            translation_placeholders={
+                "domain": DOMAIN,
+                "integration_title": import_info[CONF_NAME],
+            },
+        )
         self._abort_if_unique_id_configured()
         for key, value in import_info.items():
-            if key in self.data:
+            if key in self.data and key not in [CONF_CONTAINERS_EXCLUDE]:
                 self.data[key] = value
         return self.async_create_entry(title=self.data[CONF_NAME], data=self.data)

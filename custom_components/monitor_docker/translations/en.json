@@ -75,5 +75,11 @@
             "reauth_successful": "Reauthorization successful",
             "reconfigure_successful": "Reconfiguration successful"
         }
+    },
+    "issues": {
+        "remove_configuration_yaml": {
+            "description": "Remove your settings for {domain} {integration_title} from configuration.yaml as they are now managed via the ConfigFlow UI.",
+            "title": "Manually configured {integration_title} deprecated"
+        }
     }
 }
