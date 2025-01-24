@@ -7,14 +7,20 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant import config_entries, data_entry_flow
+from homeassistant.config_entries import (
+    SOURCE_REAUTH,
+    SOURCE_RECONFIGURE,
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    Mapping,
+)
 from homeassistant.const import (
     CONF_MONITORED_CONDITIONS,
     CONF_NAME,
     CONF_SCAN_INTERVAL,
     CONF_URL,
 )
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import (
@@ -33,15 +39,11 @@ from .const import (
     CONF_PRECISION_NETWORK_MB,
     CONF_RETRY,
     CONF_SWITCHENABLED,
-    CONF_SWITCHNAME,
     CONTAINER_MONITOR_LIST,
     CONTAINER_PRE_SELECTION,
-    DEFAULT_BUTTONNAME,
     DEFAULT_NAME,
     DEFAULT_RETRY,
     DEFAULT_SCAN_INTERVAL,
-    DEFAULT_SENSORNAME,
-    DEFAULT_SWITCHNAME,
     DOCKER_MONITOR_LIST,
     DOCKER_PRE_SELECTION,
     DOMAIN,
@@ -52,7 +54,7 @@ from .helpers import DockerAPI
 _LOGGER = logging.getLogger(__name__)
 
 
-class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class DockerConfigFlow(ConfigFlow, domain=DOMAIN):
     """Docker config flow."""
 
     VERSION = 1
@@ -79,35 +81,25 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     }
     options = None
     _docker_api = None
-    _config_entry: config_entries.ConfigEntry | None = None
+    _config_entry: ConfigEntry | None = None
     _docker_conditions = DOCKER_PRE_SELECTION
     _container_conditions = CONTAINER_PRE_SELECTION
 
     async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+        self, user_input: Mapping[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle user step."""
         errors = {}
 
         if user_input is not None:
             self.data.update(user_input)
 
-            if (
-                DOMAIN in self.hass.data
-                and user_input[CONF_NAME] in self.hass.data[DOMAIN]
-            ):
-                errors[CONF_NAME] = "name_exists"
-
-            await self.async_set_unique_id(user_input[CONF_NAME])
-
-            if not self._config_entry:
-                self._abort_if_unique_id_configured()
-
             # Convert some user_input data as preparation to calling API
             if user_input[CONF_URL] == "":
                 user_input[CONF_URL] = None
             user_input[CONF_MEMORYCHANGE] = self.data[CONF_MEMORYCHANGE]
 
+            # Test connection to Docker
             try:
                 self._docker_api = DockerAPI(self.hass, user_input)
                 if not await self._docker_api.init():
@@ -116,21 +108,25 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unhandled exception in user step")
                 errors["base"] = str(e)
 
-            if not errors:
-                self.data.update(user_input)
-                # if self._config_entry:
-                #     self.hass.config_entries.async_update_entry(
-                #         self._config_entry, data=self._config_entry.data | user_input
-                #     )
-                #     await self.hass.config_entries.async_reload(
-                #         self._config_entry.entry_id
-                #     )
-                #     return self.async_abort(reason="reauth_successful")
-                return await self.async_step_containers()
+            # Unless re-authorization, check and abort if name already exists
+            if self.source != SOURCE_REAUTH:
+                if (
+                    DOMAIN in self.hass.data
+                    and user_input[CONF_NAME] in self.hass.data[DOMAIN]
+                ):
+                    errors[CONF_NAME] = "name_exists"
 
-        # elif self._config_entry:
-        #     for key in defaults:
-        #         defaults[key] = self._config_entry.data.get(key)
+                await self.async_set_unique_id(user_input[CONF_NAME])
+                if not self._config_entry:
+                    self._abort_if_unique_id_configured()
+
+            if not errors:
+                if self.source == SOURCE_REAUTH:
+                    return self.async_update_reload_and_abort(
+                        self._config_entry,
+                        data=self.data,
+                    )
+                return await self.async_step_containers()
 
         user_schema = vol.Schema(
             {
@@ -150,7 +146,9 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
+    async def async_step_reconfigure(
+        self, user_input: Mapping[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle reconfigure step."""
         self._config_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
@@ -167,15 +165,24 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             menu_options=["containers", "conditions"],
         )
 
+    async def async_step_reauth(
+        self, user_input: Mapping[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Perform reauth upon an API authentication error."""
+        self._config_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        return await self.async_step_user(user_input)
+
     async def async_step_containers(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+        self, user_input: Mapping[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle user step."""
         errors = {}
 
         if user_input is not None:
             self.data.update(user_input)
-            if self.source == config_entries.SOURCE_RECONFIGURE:
+            if self.source == SOURCE_RECONFIGURE:
                 # self.async_set_unique_id(self.data[CONF_NAME])
                 # self._abort_if_unique_id_mismatch()
                 return self.async_update_reload_and_abort(
@@ -204,8 +211,8 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_conditions(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+        self, user_input: Mapping[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle user step."""
         errors = {}
 
@@ -220,7 +227,7 @@ class DockerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.data[CONF_MONITORED_CONDITIONS] = (
                     self._docker_conditions + self._container_conditions
                 )
-                if self.source == config_entries.SOURCE_RECONFIGURE:
+                if self.source == SOURCE_RECONFIGURE:
                     # self.async_set_unique_id(self.data[CONF_NAME])
                     # self._abort_if_unique_id_mismatch()
                     return self.async_update_reload_and_abort(
