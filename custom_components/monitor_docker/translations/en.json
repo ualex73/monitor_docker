@@ -78,8 +78,8 @@
     },
     "issues": {
         "remove_configuration_yaml": {
-            "description": "Remove your settings for {domain} {integration_title} from configuration.yaml as they are now managed via the ConfigFlow UI.",
-            "title": "Manually configured {integration_title} deprecated"
+            "description": "Fist ensure that your integration settings from configuration.yaml still are intact (renaming is no longer available). Explicit settings can be viewed and changed in the Reconfigure meny for each integration istance.\nRenaming can be done on device or entiti level in UI.\nThen remove your settings for {domain} {integration_title} from configuration.yaml to get rid of this message.",
+            "title": "Manually configured {integration_title} no longer used"
         }
     }
 }

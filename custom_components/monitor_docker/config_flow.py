@@ -318,6 +318,12 @@ class DockerConfigFlow(ConfigFlow, domain=DOMAIN):
             },
         )
         self._abort_if_unique_id_configured()
+        if exclude := import_info.pop(CONF_CONTAINERS_EXCLUDE, None):
+            import_info[CONF_CONTAINERS] = [
+                container
+                for container in import_info[CONF_CONTAINERS]
+                if container not in exclude
+            ]
         for key, value in import_info.items():
             if key in self.data and key not in [CONF_CONTAINERS_EXCLUDE]:
                 self.data[key] = value
