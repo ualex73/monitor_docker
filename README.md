@@ -164,10 +164,10 @@ monitor_docker:
 | 1cpu_percentage                   | CPU Usage, between 0-100%       | %     |
 | memory                            | Memory usage                    | MB    |
 | memory_percentage                 | Memory usage                    | %     |
-| network_speed_up                  | Network speed upstream          | kB/s  |
-| network_speed_down                | Network speed downstream        | kB/s  |
-| network_total_up                  | Network total upstream          | MB    |
-| network_total_down                | Network total downstream        | MB    |
+| network_speed_up                  | Network speed upstream. **Not** available when using network mode is 'host' | kB/s  |
+| network_speed_down                | Network speed downstream. **Not** available when using network mode is 'host' | kB/s  |
+| network_total_up                  | Network total upstream. **Not** available when using network mode is 'host' | MB    |
+| network_total_down                | Network total downstream. **Not** available when using network mode is 'host' | MB    |
 | allinone                          | This is a special condition and when used, it will only create 1 sensor per container with all the monitored conditions as attribute value. NOTE: If you use this sensor, all other sensors are NOT created, just 1 sensor |-     |
 
 ### Debugging
