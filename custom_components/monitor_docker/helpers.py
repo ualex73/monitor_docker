@@ -108,6 +108,10 @@ class DockerAPI:
         self._subscribers: list[Callable] = []
         self._api: aiodocker.Docker = None
 
+        self._tcp_connector = None
+        self._tcp_session = None
+        self._tcp_ssl_context = None
+
         _LOGGER.debug("[%s]: Helper version: %s", self._instance, VERSION)
 
         self._interval: int = config[CONF_SCAN_INTERVAL]
@@ -120,113 +124,104 @@ class DockerAPI:
         )
 
     #############################################################
-    async def init(self, startCount: int = 0) -> bool:
+    async def init(self, startCount: int = 0):
         # Set to None when called twice, etc
         self._api = None
 
         _LOGGER.debug("[%s]: DockerAPI init()", self._instance)
 
-        try:
-            # Try to fix unix:// to unix:/// (3 are required by aiodocker)
-            url: str = self._config[CONF_URL]
-            if (
-                url is not None
-                and url.find("unix://") == 0
-                and url.find("unix:///") == -1
-            ):
-                url = url.replace("unix://", "unix:///")
+        # Get URL
+        url: str = self._config[CONF_URL]
 
-            # When we reconnect with tcp, we should delay - docker is maybe not fully ready
-            if startCount > 0 and url is not None and url.find("unix:") != 0:
-                await asyncio.sleep(5)
+        # HA sometimes makes the url="", which aiodocker does not like
+        if url is not None and url == "":
+            url = None
 
-            # Check if it is a tcp connection or not
-            tcpConnection = False
+        # Try to fix unix:// to unix:/// (3 are required by aiodocker)
+        if url is not None and url.find("unix://") == 0 and url.find("unix:///") == -1:
+            url = url.replace("unix://", "unix:///")
 
-            # Remove Docker environment variables
-            os.environ.pop("DOCKER_TLS_VERIFY", None)
-            os.environ.pop("DOCKER_CERT_PATH", None)
+        # When we reconnect with tcp, we should delay - docker is maybe not fully ready
+        if startCount > 0 and url is not None and url.find("unix:") != 0:
+            await asyncio.sleep(5)
 
-            # Setup Docker parameters
-            connector = None
-            session = None
-            ssl_context = None
+        # Remove Docker environment variables
+        os.environ.pop("DOCKER_TLS_VERIFY", None)
+        os.environ.pop("DOCKER_CERT_PATH", None)
 
-            if url is not None:
-                _LOGGER.debug("[%s]: Docker URL is '%s'", self._instance, url)
-            else:
-                _LOGGER.debug(
-                    "[%s]: Docker URL is auto-detect (most likely using 'unix://var/run/docker.socket')",
-                    self._instance,
-                )
+        # Setup Docker parameters
+        self._tcp_connector = None
+        self._tcp_session = None
+        self._tcp_ssl_context = None
 
-            # If is not empty or an Unix socket, then do check TCP/SSL
-            if url is not None and url.find("unix:") == -1:
-                # Check if URL is valid
-                if not (
-                    url.find("tcp:") == 0
-                    or url.find("http:") == 0
-                    or url.find("https:") == 0
-                ):
-                    raise ValueError(
-                        f"[{self._instance}] Docker URL '{url}' does not start with tcp:, http: or https:"
-                    )
-
-                if self._config[CONF_CERTPATH] and url.find("http:") == 0:
-                    # fixup URL and warn
-                    _LOGGER.warning(
-                        "[%s] Docker URL '%s' should be https instead of http when using certificate path",
-                        self._instance,
-                        url,
-                    )
-                    url = url.replace("http:", "https:")
-
-                if self._config[CONF_CERTPATH] and url.find("tcp:") == 0:
-                    # fixup URL and warn
-                    _LOGGER.warning(
-                        "[%s] Docker URL '%s' should be https instead of tcp when using certificate path",
-                        self._instance,
-                        url,
-                    )
-                    url = url.replace("tcp:", "https:")
-
-                if self._config[CONF_CERTPATH]:
-                    _LOGGER.debug(
-                        "[%s]: Docker certification path is '%s' SSL/TLS will be used",
-                        self._instance,
-                        self._config[CONF_CERTPATH],
-                    )
-
-                    # Create our SSL context object
-                    ssl_context = await self._hass.async_add_executor_job(
-                        self._docker_ssl_context
-                    )
-
-                # Setup new TCP connection, otherwise timeout takes toooo long
-                connector = TCPConnector(ssl=ssl_context)
-                session = ClientSession(
-                    connector=connector,
-                    timeout=ClientTimeout(
-                        connect=5,
-                        sock_connect=5,
-                        total=10,
-                    ),
-                )
-
-            # Initiate the aiodocker instance now
-            self._api = aiodocker.Docker(
-                url=url, connector=connector, session=session, ssl_context=ssl_context
-            )
-
-        except Exception as err:
-            exc_info = True if str(err) == "" else False
-            _LOGGER.error(
-                "[%s]: Can not connect to Docker API (%s)",
+        if url is not None:
+            _LOGGER.debug("[%s]: Docker URL is '%s'", self._instance, url)
+        else:
+            _LOGGER.debug(
+                "[%s]: Docker URL is auto-detect (most likely using 'unix://var/run/docker.socket')",
                 self._instance,
-                str(err),
-                exc_info=exc_info,
             )
-            return False
+
+        # If is not empty or an Unix socket, then do check TCP/SSL
+        if url and url.find("unix:") == -1:
+            # Check if URL is valid
+            if not (
+                url.find("tcp:") == 0
+                or url.find("http:") == 0
+                or url.find("https:") == 0
+            ):
+                raise ValueError(
+                    f"[{self._instance}] Docker URL '{url}' does not start with tcp:, http: or https:"
+                )
+
+            if self._config[CONF_CERTPATH] and url.find("http:") == 0:
+                # fixup URL and warn
+                _LOGGER.warning(
+                    "[%s] Docker URL '%s' should be https instead of http when using certificate path",
+                    self._instance,
+                    url,
+                )
+                url = url.replace("http:", "https:")
+
+            if self._config[CONF_CERTPATH] and url.find("tcp:") == 0:
+                # fixup URL and warn
+                _LOGGER.warning(
+                    "[%s] Docker URL '%s' should be https instead of tcp when using certificate path",
+                    self._instance,
+                    url,
+                )
+                url = url.replace("tcp:", "https:")
+
+            if self._config[CONF_CERTPATH]:
+                _LOGGER.debug(
+                    "[%s]: Docker certification path is '%s' SSL/TLS will be used",
+                    self._instance,
+                    self._config[CONF_CERTPATH],
+                )
+
+                # Create our SSL context object
+                self._tcp_ssl_context = await self._hass.async_add_executor_job(
+                    self._docker_ssl_context
+                )
+
+            # Setup new TCP connection, otherwise timeout takes toooo long
+            self._tcp_connector = TCPConnector(ssl=self._tcp_ssl_context)
+            self._tcp_session = ClientSession(
+                connector=self._tcp_connector,
+                timeout=ClientTimeout(
+                    connect=5,
+                    sock_connect=5,
+                    total=10,
+                ),
+            )
+
+        # Initiate the aiodocker instance now. Could raise an exception
+        self._api = aiodocker.Docker(
+            url=url,
+            connector=self._tcp_connector,
+            session=self._tcp_session,
+            ssl_context=self._tcp_ssl_context,
+        )
 
         versionInfo = await self._api.version()
         version: str | None = versionInfo.get("Version", None)
@@ -244,8 +239,6 @@ class DockerAPI:
 
             # Add container name to the list
             self._containers[cname] = None
-
-        return True
 
     #############################################################
     async def run(self):
@@ -325,6 +318,10 @@ class DockerAPI:
             )
             await container.destroy()
             # TBD clear container from list?
+
+        # Close session if initialized
+        if self._tcp_session:
+            self._tcp_session.detach()
 
         # Clear api value
         # self._api = None

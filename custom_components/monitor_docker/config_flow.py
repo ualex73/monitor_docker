@@ -102,8 +102,8 @@ class DockerConfigFlow(ConfigFlow, domain=DOMAIN):
             # Test connection to Docker
             try:
                 self._docker_api = DockerAPI(self.hass, user_input)
-                if not await self._docker_api.init():
-                    errors["base"] = "invalid_connection"
+                await self._docker_api.init()
+                #errors["base"] = "invalid_connection"
             except Exception as e:  # pylint: disable=broad-except
                 _LOGGER.exception("Unhandled exception in user step")
                 errors["base"] = str(e)

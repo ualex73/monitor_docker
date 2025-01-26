@@ -15,6 +15,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.reload import async_setup_reload_service
 
@@ -182,90 +183,44 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 #################################################################
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up this integration using UI."""
-
-    async def RunDocker(hass: HomeAssistant, entry: ConfigType) -> None:
-        """Wrapper around function for a separated thread."""
-
-        # Create docker instance, it will have asyncio threads
-        hass.data[DOMAIN][entry[CONF_NAME]] = {}
-        hass.data[DOMAIN][entry[CONF_NAME]][CONFIG] = entry
-
-        startCount = 0
-
-        while True:
-            doLoop = True
-
-            try:
-                hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(hass, entry)
-                await hass.data[DOMAIN][entry[CONF_NAME]][API].init(startCount)
-                await hass.data[DOMAIN][entry[CONF_NAME]][API].run()
-                await hass.config_entries.async_forward_entry_setups(
-                    config_entry, PLATFORMS
-                )
-                # await hass.data[DOMAIN][entry[CONF_NAME]][API].load()
-            except Exception as err:
-                doLoop = False
-                if entry[CONF_RETRY] == 0:
-                    raise
-                else:
-                    _LOGGER.error("Failed Docker connect: %s", str(err))
-                    _LOGGER.error("Retry in %d seconds", entry[CONF_RETRY])
-                    await asyncio.sleep(entry[CONF_RETRY])
-
-            startCount += 1
-
-            if doLoop:
-                # Now run forever in this separated thread
-                # loop.run_forever()
-
-                # We only get here if a docker instance disconnected or HASS is stopping
-                if not hass.data[DOMAIN][entry[CONF_NAME]][API]._dockerStopped:
-                    # If HASS stopped, do not retry
-                    break
-
-    # config_entry.async_on_unload(config_entry.add_update_listener(async_reload_entry))
 
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
-    # For now this is disabled as selection of conditions is made in the UI.
-    #
-    # # Default MONITORED_CONDITIONS_LIST also contains allinone, so we need to fix it up here
-    # if len(config_entry.data[CONF_MONITORED_CONDITIONS]) == 0:
-    #     # Add whole list, including allinone. Make a copy, no reference
-    #     config_entry.data[CONF_MONITORED_CONDITIONS] = MONITORED_CONDITIONS_LIST.copy()
-    #     # remove the allinone
-    #     config_entry.data[CONF_MONITORED_CONDITIONS].remove(CONTAINER_INFO_ALLINONE)
-    #
-    # # Check if CONF_MONITORED_CONDITIONS has only ALLINONE, then expand to all
-    # if (
-    #     len(config_entry.data[CONF_MONITORED_CONDITIONS]) == 1
-    #     and CONTAINER_INFO_ALLINONE in config_entry.data[CONF_MONITORED_CONDITIONS]
-    # ):
-    #     config_entry.data[CONF_MONITORED_CONDITIONS] = list(MONITORED_CONDITIONS_LIST) + list(
-    #         [CONTAINER_INFO_ALLINONE]
-    #     )
+    api = None
 
-    # Will not work with reconfigure since it will have the same name, and unique name is already ensured in config_flow
-    # if config_entry.data[CONF_NAME] in hass.data[DOMAIN]:
-    #     _LOGGER.error(
-    #         "Instance %s is duplicate, please assign an unique name",
-    #         config_entry.data[CONF_NAME],
-    #     )
-    #     return False
+    try:
+        api = DockerAPI(hass, entry.data)
+        await api.init()
+        await api.run()
 
-    # Each docker hosts runs in its own thread. We need to pass hass too, for the load_platform
-    asyncio.create_task(RunDocker(hass, config_entry.data))
+        hass.data[DOMAIN][entry.data[CONF_NAME]] = {}
+        hass.data[DOMAIN][entry.data[CONF_NAME]][CONFIG] = entry.data
+        hass.data[DOMAIN][entry.data[CONF_NAME]][API] = api
+
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    except Exception as err:
+        _LOGGER.error("[%s]: Failed to setup, error=%s", entry.data[CONF_NAME],str(err))
+
+        if api:
+            await api.destroy()
+
+        raise ConfigEntryNotReady(f"Failed to setup {err}") from err
 
     return True
 
 
 #################################################################
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(config_entry, PLATFORMS)
+
+    _LOGGER.debug("async_unload_entry")
+
+    await hass.data[DOMAIN][entry.data[CONF_NAME]][API].destroy()
+
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 #################################################################
