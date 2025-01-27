@@ -105,50 +105,6 @@ CONFIG_SCHEMA = vol.Schema(
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Will setup the Monitor Docker platform."""
 
-    # async def RunDocker(hass: HomeAssistant, entry: ConfigType) -> None:
-    #     """Wrapper around function for a separated thread."""
-    #
-    #     # Create docker instance, it will have asyncio threads
-    #     hass.data[DOMAIN][entry[CONF_NAME]] = {}
-    #     hass.data[DOMAIN][entry[CONF_NAME]][CONFIG] = entry
-    #
-    #     startCount = 0
-    #
-    #     while True:
-    #         doLoop = True
-    #
-    #         try:
-    #             hass.data[DOMAIN][entry[CONF_NAME]][API] = DockerAPI(hass, entry)
-    #             await hass.data[DOMAIN][entry[CONF_NAME]][API].init(startCount)
-    #             await hass.data[DOMAIN][entry[CONF_NAME]][API].run()
-    #             await hass.data[DOMAIN][entry[CONF_NAME]][API].load()
-    #         except Exception as err:
-    #             doLoop = False
-    #             if entry[CONF_RETRY] == 0:
-    #                 raise
-    #             else:
-    #                 _LOGGER.error("Failed Docker connect: %s", str(err))
-    #                 _LOGGER.error("Retry in %d seconds", entry[CONF_RETRY])
-    #                 await asyncio.sleep(entry[CONF_RETRY])
-    #
-    #         startCount += 1
-    #
-    #         if doLoop:
-    #             # Now run forever in this separated thread
-    #             # loop.run_forever()
-    #
-    #             # We only get here if a docker instance disconnected or HASS is stopping
-    #             if not hass.data[DOMAIN][entry[CONF_NAME]][API]._dockerStopped:
-    #                 # If HASS stopped, do not retry
-    #                 break
-
-    # Setup reload service
-    # await async_setup_reload_service(hass, DOMAIN, [DOMAIN])
-
-    # Create domain monitor_docker data variable
-    if DOMAIN not in hass.data:
-        hass.data[DOMAIN] = {}
-
     if DOMAIN not in config:
         return True  # To continue with async_setup_entry
 
@@ -181,16 +137,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             )
         )
         return True
-
-        # if entry[CONF_NAME] in hass.data[DOMAIN]:
-        #     _LOGGER.error(
-        #         "Instance %s is duplicate, please assign an unique name",
-        #         entry[CONF_NAME],
-        #     )
-        #     return False
-        #
-        # # Each docker hosts runs in its own thread. We need to pass hass too, for the load_platform
-        # asyncio.create_task(RunDocker(hass, entry))
 
     return True
 
