@@ -272,11 +272,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Fake update function, just as an example
     # def data_1_1_to_1_2(data: dict):
-    #     if entity_id := data.pop("old_certpath_format", None):
-    #         data[CONF_CERTPATH] = entity_id
+    #     OLD_CERTPATH = "old_certpath_key"
+    #     if certpath := data.pop("OLD_CERTPATH", None):
+    #         data[CONF_CERTPATH] = certpath
     #         return data
-    #     _LOGGER.warning('Could not find "np_entity" in entry')
-    #     raise MigrateError('Could not find "np_entity" in entry')
+    #     raise MigrateError(f'Could not find "{OLD_CERTPATH}" in data')
 
     try:
         if entry.version == 1:
@@ -288,7 +288,10 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             # Version 1.2 to 2.0
             # if entry.minor_version == 2:
             #     new_data = data_1_2_to_2_0(new_data)
+            #     entry.version = 2
             #     entry.minor_version = 0
+        # if entry.version == 2:
+        #     ...
     except MigrateError as err:
         _LOGGER.error(
             "Error while upgrading from version %s.%s to %s.%s",
