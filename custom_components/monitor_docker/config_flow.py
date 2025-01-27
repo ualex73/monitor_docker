@@ -58,6 +58,7 @@ class DockerConfigFlow(ConfigFlow, domain=DOMAIN):
     """Docker config flow."""
 
     VERSION = 1
+    MINOR_VERSION = 1
     data = {
         # User
         CONF_NAME: DEFAULT_NAME,
