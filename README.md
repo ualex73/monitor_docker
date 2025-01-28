@@ -183,7 +183,7 @@ logger:
 ### Q&A
 Here are some possible questions/errors with their answers.
 
-1. **Question:** Does this integration work with the HASS or supervisord installers?
+1. **Question:** Does this integration work with the HASS or supervisord installers?  
     **Answer:** Yes, with an external docker container. Home Assistant supervised does not expose the Docker UNIX/TCP socket. However, you can use an external docker container named `docker-socket-proxy`. Start this docker with the following docker-compose code. It exposes the socket over TCP and `monitor_docker` can listen to it.
     ```yaml
     # Proxy the Docker sock so that we can pick up stats for HomeAssistant
@@ -219,11 +219,11 @@ Here are some possible questions/errors with their answers.
       - name: Docker
         url: http://<host_ip>:2375
 ```
-2. **Error:** `Missing valid docker_host.Either DOCKER_HOST or local sockets are not available.`
+2. **Error:** `Missing valid docker_host.Either DOCKER_HOST or local sockets are not available.`  
     **Answer:** Most likely the socket is not mounted properly in your Home Assistant container. Please check if you added the volume `/var/run/docker.sock`
-3. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via http://10.0.0.1:2376...)`.
+3. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via http://10.0.0.1:2376...)`.  
     **Answer:** You are trying to connect via TCP and most likely the remote address is unavailable. Test it with the command `docker -H tcp://10.0.0.1:2376 ps` if it works (replace `10.0.0.1` with your IP address). Also you can consult the following URL for more help: https://docs.docker.com/config/daemon/remote-access/
-4. **Question:** Is Docker TCP socket via TLS supported?
+4. **Question:** Is Docker TCP socket via TLS supported?  
     **Answer:** Yes it is. You need to set the URL to e.g. `http://ip:2376` and the environment variables `DOCKER_TLS_VERIFY=1` and `DOCKER_CERT_PATH=<path to your certificates>` need to be set
 The following is a docker-compose example of how to set the environment variables and the volume with the certificates:
 ```
@@ -240,7 +240,7 @@ services:
       - DOCKER_CERT_PATH=/certs
 ...
 ```
-5. **Question:** Can this integration monitor 2 or more Docker instances?
+5. **Question:** Can this integration monitor 2 or more Docker instances?  
     **Answer:** Yes it can. Just duplicate the entries and give it an unique name and define the url as shown below:
 ```yaml
 # Example configuration.yaml entry
@@ -253,26 +253,26 @@ monitor_docker:
     containers:
     ...
 ```
-*NOTE*: The integration supports multiple Docker instances, but you can only define 1 TLS configuration which is applied to all (thus you cannot mix TCP with and without TLS).
-6. **Question:** Can create, delete or re-create a container be implemented in the integration? 
-    **Answer:** The used Docker library has no easy (and safe) way to handle such functionality. Please use *docker-compose* to handle such operations. If anybody can make this fully work in a safe way, I'll be happy to merge the PR
-7. **Question:** Can you add more security to a switch? 
-    **Answer:** No, this isn't possible from the integration. You need to do this directly in Lovelace itself, within the card e.g. https://github.com/iantrich/restriction-card
-8. **Question:** All the reported memory values are 0 (zero), can this be fixed in the integration? 
-    **Answer:** No, the integration just uses the available information from the API and you should fix your Docker
-9. **Question:** Is it possible to monitor HASS.IO? 
-    **Answer:** Yes, please use the Docker Socker Proxy https://github.com/Tecnativa/docker-socket-proxy and configure http://ip:port to connect to the proxy. This has been tested and verified by other users, but I cannot give support on it.
-10. **Question:** I get a permission denied error? 
+*NOTE*: The integration supports multiple Docker instances, but you can only define 1 TLS configuration which is applied to all (thus you cannot mix TCP with and without TLS).  
+6. **Question:** Can create, delete or re-create a container be implemented in the integration?  
+    **Answer:** The used Docker library has no easy (and safe) way to handle such functionality. Please use *docker-compose* to handle such operations. If anybody can make this fully work in a safe way, I'll be happy to merge the PR  
+7. **Question:** Can you add more security to a switch?  
+    **Answer:** No, this isn't possible from the integration. You need to do this directly in Lovelace itself, within the card e.g. https://github.com/iantrich/restriction-card  
+8. **Question:** All the reported memory values are 0 (zero), can this be fixed in the integration?  
+    **Answer:** No, the integration just uses the available information from the API and you should fix your Docker  
+9. **Question:** Is it possible to monitor HASS.IO?  
+    **Answer:** Yes, please use the Docker Socker Proxy https://github.com/Tecnativa/docker-socket-proxy and configure http://ip:port to connect to the proxy. This has been tested and verified by other users, but I cannot give support on it.  
+10. **Question:** I get a permission denied error?  
      **Answer:** In general Docker and HASS.IO are running as root and always can connect to /var/run/docker.sock. If you run in a venv environment or directly with Python, you may need to add the "docker" group to the user used for Home Assistant. The following commands may help you, and it is recommended to reboot after "usermod":
   ```
   $ sudo usermod -a -G docker <user>
   $ sudo reboot
   ```
-11. **Question:** Can you add the feature to check if there are updates to images in e.g. hub.docker.com? 
+11. **Question:** Can you add the feature to check if there are updates to images in e.g. hub.docker.com?  
      **Answer:** Such feature goes outside of the scope of monitor_docker and there are few other options available for this. You can use https://newreleases.io or https://github.com/crazy-max/diun/
-12. **Question:** Is Docker via SSH supported? 
+12. **Question:** Is Docker via SSH supported?  
      **Answer:** No, the Docker library used, does not support it. There is a small _but_, maybe you can get it to work via `socat`. The following URL may help you: https://serverfault.com/questions/127794/forward-local-port-or-socket-file-to-remote-socket-file/362833#362833
-13. **Question:** Can the sensors have unique entity identifiers? This is useful for renaming it in the HA GUI 
+13. **Question:** Can the sensors have unique entity identifiers? This is useful for renaming it in the HA GUI  
      **Answer:** This is not possible, due to the nature of how this integration works. The docker name needs to be consistent across restart and recreate, this can be only done by overruling the entity identifier as it is working now
 
 ## Credits
