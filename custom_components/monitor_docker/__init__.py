@@ -15,11 +15,12 @@ from homeassistant.const import (
     CONF_URL,
     Platform,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, IntegrationError
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.reload import async_setup_reload_service
 
+from .config_flow import DockerConfigFlow
 from .const import (
     API,
     CONF_CERTPATH,
@@ -186,4 +187,93 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
 async def async_reset_platform(hass: HomeAssistant, integration_name: str) -> None:
     """Reload the integration."""
     if DOMAIN not in hass.data:
-        _LOGGER.error("monitor_docker not loaded")
+        _LOGGER.error("Monitor_docker not loaded")
+
+
+#################################################################
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate old entry."""
+    _LOGGER.debug(
+        "Attempting migrating configuration from version %s.%s",
+        entry.version,
+        entry.minor_version,
+    )
+
+    class MigrateError(IntegrationError):
+        """Error to indicate there is was an error in version migration."""
+
+    installed_version = DockerConfigFlow.VERSION
+    installed_minor_version = DockerConfigFlow.MINOR_VERSION
+
+    new_data = {**entry.data}
+    # new_options = {**entry.options}  # Note used
+
+    if entry.version > installed_version:
+        _LOGGER.warning(
+            "Downgrading major version from %s to %s is not allowed",
+            entry.version,
+            installed_version,
+        )
+        return False
+
+    if (
+        entry.version == installed_version
+        and entry.minor_version > installed_minor_version
+    ):
+        _LOGGER.warning(
+            "Downgrading minor version from %s.%s to %s.%s is not allowed",
+            entry.version,
+            entry.minor_version,
+            installed_version,
+            installed_minor_version,
+        )
+        return False
+
+    # Fake update function, just as an example
+    # def data_1_1_to_1_2(data: dict):
+    #     OLD_CERTPATH = "old_certpath_key"
+    #     if certpath := data.pop("OLD_CERTPATH", None):
+    #         data[CONF_CERTPATH] = certpath
+    #         return data
+    #     raise MigrateError(f'Could not find "{OLD_CERTPATH}" in data')
+
+    try:
+        if entry.version == 1:
+            pass
+            # Verison 1.1 to 1.2
+            # if entry.minor_version == 1:
+            #     new_data = data_1_1_to_1_2(new_data)
+            #     entry.minor_version = 2
+            # Version 1.2 to 2.0
+            # if entry.minor_version == 2:
+            #     new_data = data_1_2_to_2_0(new_data)
+            #     entry.version = 2
+            #     entry.minor_version = 0
+        # if entry.version == 2:
+        #     ...
+    except MigrateError as err:
+        _LOGGER.error(
+            "Error while upgrading from version %s.%s to %s.%s",
+            entry.version,
+            entry.minor_version,
+            installed_version,
+            installed_minor_version,
+        )
+        _LOGGER.error(str(err))
+        return False
+
+    hass.config_entries.async_update_entry(
+        entry,
+        data=new_data,
+        # options=new_options,
+        version=installed_version,
+        minor_version=installed_minor_version,
+    )
+    _LOGGER.info(
+        "Migration configuration from version %s.%s to %s.%s successful",
+        entry.version,
+        entry.minor_version,
+        installed_version,
+        installed_minor_version,
+    )
+    return True
