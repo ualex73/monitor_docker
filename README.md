@@ -254,25 +254,25 @@ monitor_docker:
     ...
 ```
 *NOTE*: The integration supports multiple Docker instances, but you can only define 1 TLS configuration which is applied to all (thus you cannot mix TCP with and without TLS).
-6. **Question:** Can create, delete or re-create a container be implemented in the integration?
+6. **Question:** Can create, delete or re-create a container be implemented in the integration? 
     **Answer:** The used Docker library has no easy (and safe) way to handle such functionality. Please use *docker-compose* to handle such operations. If anybody can make this fully work in a safe way, I'll be happy to merge the PR
-7. **Question:** Can you add more security to a switch?
+7. **Question:** Can you add more security to a switch? 
     **Answer:** No, this isn't possible from the integration. You need to do this directly in Lovelace itself, within the card e.g. https://github.com/iantrich/restriction-card
-8. **Question:** All the reported memory values are 0 (zero), can this be fixed in the integration?
+8. **Question:** All the reported memory values are 0 (zero), can this be fixed in the integration? 
     **Answer:** No, the integration just uses the available information from the API and you should fix your Docker
-9. **Question:** Is it possible to monitor HASS.IO?
+9. **Question:** Is it possible to monitor HASS.IO? 
     **Answer:** Yes, please use the Docker Socker Proxy https://github.com/Tecnativa/docker-socket-proxy and configure http://ip:port to connect to the proxy. This has been tested and verified by other users, but I cannot give support on it.
-10. **Question:** I get a permission denied error?
+10. **Question:** I get a permission denied error? 
      **Answer:** In general Docker and HASS.IO are running as root and always can connect to /var/run/docker.sock. If you run in a venv environment or directly with Python, you may need to add the "docker" group to the user used for Home Assistant. The following commands may help you, and it is recommended to reboot after "usermod":
   ```
   $ sudo usermod -a -G docker <user>
   $ sudo reboot
   ```
-11. **Question:** Can you add the feature to check if there are updates to images in e.g. hub.docker.com?
+11. **Question:** Can you add the feature to check if there are updates to images in e.g. hub.docker.com? 
      **Answer:** Such feature goes outside of the scope of monitor_docker and there are few other options available for this. You can use https://newreleases.io or https://github.com/crazy-max/diun/
-12. **Question:** Is Docker via SSH supported?
+12. **Question:** Is Docker via SSH supported? 
      **Answer:** No, the Docker library used, does not support it. There is a small _but_, maybe you can get it to work via `socat`. The following URL may help you: https://serverfault.com/questions/127794/forward-local-port-or-socket-file-to-remote-socket-file/362833#362833
-13. **Question:** Can the sensors have unique entity identifiers? This is useful for renaming it in the HA GUI
+13. **Question:** Can the sensors have unique entity identifiers? This is useful for renaming it in the HA GUI 
      **Answer:** This is not possible, due to the nature of how this integration works. The docker name needs to be consistent across restart and recreate, this can be only done by overruling the entity identifier as it is working now
 
 ## Credits
