@@ -215,19 +215,27 @@ class DockerAPI:
                 ),
             )
 
-        # Initiate the aiodocker instance now. Could raise an exception
-        self._api = aiodocker.Docker(
-            url=url,
-            connector=self._tcp_connector,
-            session=self._tcp_session,
-            ssl_context=self._tcp_ssl_context,
-        )
+        try:
+            # Initiate the aiodocker instance now. Could raise an exception
+            self._api = aiodocker.Docker(
+                url=url,
+                connector=self._tcp_connector,
+                session=self._tcp_session,
+                ssl_context=self._tcp_ssl_context,
+            )
 
-        versionInfo = await self._api.version()
-        version: str | None = versionInfo.get("Version", None)
+            versionInfo = await self._api.version()
+            version: str | None = versionInfo.get("Version", None)
 
-        # Pre 19.03 support memory calculation is dropped
-        _LOGGER.debug("[%s]: Docker version: %s", self._instance, version)
+            # Pre 19.03 support memory calculation is dropped
+            _LOGGER.debug("[%s]: Docker version: %s", self._instance, version)
+        except aiodocker.exceptions.DockerError as err:
+            _LOGGER.error(
+                "[%s]: Docker API connection failed: %s", self._instance, str(err)
+            )
+            raise ConfigEntryAuthFailed from err
+        except Exception:
+            raise
 
         # Get the list of containers to monitor
         containers = await self._api.containers.list(all=True)
@@ -936,7 +944,7 @@ class DockerContainerAPI:
                     str(err),
                     exc_info=exc_info,
                 )
-                raise ConfigEntryAuthFailed(err) from err
+                return  # Could be necessary to do something more here
 
             self._task = asyncio.create_task(self._run())
 

@@ -15,8 +15,12 @@ from homeassistant.const import (
     CONF_URL,
     Platform,
 )
-from homeassistant.core import HomeAssistant, IntegrationError
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import (
+    ConfigEntryNotReady,
+    ConfigEntryError,
+    ConfigEntryAuthFailed,
+)
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.reload import async_setup_reload_service
 
@@ -161,12 +165,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN][entry.data[CONF_NAME]][API] = api
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    except ConfigEntryAuthFailed:
+        # if api:
+        #     await api.destroy()
+        raise
     except Exception as err:
-        _LOGGER.error("[%s]: Failed to setup, error=%s", entry.data[CONF_NAME],str(err))
-
+        _LOGGER.error(
+            "[%s]: Failed to setup, error=%s", entry.data[CONF_NAME], str(err)
+        )
         if api:
             await api.destroy()
-
         raise ConfigEntryNotReady(f"Failed to setup {err}") from err
 
     return True
@@ -199,7 +207,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.minor_version,
     )
 
-    class MigrateError(IntegrationError):
+    class MigrateError(ConfigEntryError):
         """Error to indicate there is was an error in version migration."""
 
     installed_version = DockerConfigFlow.VERSION
