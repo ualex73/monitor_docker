@@ -21,6 +21,7 @@ from homeassistant.exceptions import (
     ConfigEntryError,
     ConfigEntryAuthFailed,
 )
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.reload import async_setup_reload_service
 
@@ -158,6 +159,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         api = DockerAPI(hass, entry.data)
         await api.init()
+
+        # Pre-register docker instance, preventing warning in initial setup
+        assert entry.unique_id
+        device_registry = dr.async_get(hass)
+        config_id = f"{entry.data[CONF_NAME]}_{entry.data[CONF_URL]}"
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, config_id)},
+            manufacturer="Docker",
+            name=entry.title,
+            sw_version="1.00",
+        )
+
         await api.run()
 
         hass.data[DOMAIN][entry.data[CONF_NAME]] = {}
