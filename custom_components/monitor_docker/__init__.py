@@ -213,6 +213,14 @@ async def async_reset_platform(hass: HomeAssistant, integration_name: str) -> No
 
 
 #################################################################
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove a config entry."""
+
+    if entry.data[CONF_NAME] in hass.data[DOMAIN]:
+        hass.data[DOMAIN].pop(entry.data[CONF_NAME])
+
+
+#################################################################
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Migrate old entry."""
     _LOGGER.debug(
