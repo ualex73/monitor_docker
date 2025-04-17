@@ -72,12 +72,7 @@ async def async_setup_platform(
 ):
     """Set up the Monitor Docker Sensor."""
 
-    def find_rename(d: dict[str, str], item: str) -> str:
-        for k in d:
-            if re.match(k, item):
-                return d[k]
 
-        return item
 
     if discovery_info is None:
         return

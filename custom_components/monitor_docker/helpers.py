@@ -70,9 +70,8 @@ from .const import (
     DOCKER_STATS_MEMORY_PERCENTAGE,
     DOMAIN,
     PRECISION,
+    VERSION,
 )
-
-VERSION = "1.20b3"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -137,13 +136,33 @@ class DockerAPI:
         if url is not None and url == "":
             url = None
 
-        # Try to fix unix:// to unix:/// (3 are required by aiodocker)
-        if url is not None and url.find("unix://") == 0 and url.find("unix:///") == -1:
-            url = url.replace("unix://", "unix:///")
+        # A Unix connection should contain 'unix://' in the URL
+        unixConnection = url is not None and url.find("unix://") == 0
 
-        # When we reconnect with tcp, we should delay - docker is maybe not fully ready
-        if startCount > 0 and url is not None and url.find("unix:") != 0:
-            await asyncio.sleep(5)
+        # If it is not a Unix connection, it should be a TCP connection
+        tcpConnection = url is not None and not unixConnection
+
+        if unixConnection:
+            _LOGGER.debug("[%s]: Docker URL contains a Unix socket connection: '%s'", self._instance, url)
+
+            # Try to fix unix:// to unix:/// (3 are required by aiodocker)
+            if url.find("unix:///") == -1:
+                url = url.replace("unix://", "unix:///")
+
+        elif tcpConnection:
+            _LOGGER.debug("[%s]: Docker URL contains a TCP connection: '%s'", self._instance, url)
+
+            # When we reconnect with tcp, we should delay - docker is maybe not fully ready
+            if startCount > 0:
+                await asyncio.sleep(5)
+
+        else:
+            _LOGGER.debug(
+                "[%s]: Docker URL is auto-detect (most likely using 'unix://var/run/docker.socket')",
+                self._instance,
+            )
+
+
 
         # Remove Docker environment variables
         os.environ.pop("DOCKER_TLS_VERIFY", None)
@@ -154,16 +173,8 @@ class DockerAPI:
         self._tcp_session = None
         self._tcp_ssl_context = None
 
-        if url is not None:
-            _LOGGER.debug("[%s]: Docker URL is '%s'", self._instance, url)
-        else:
-            _LOGGER.debug(
-                "[%s]: Docker URL is auto-detect (most likely using 'unix://var/run/docker.socket')",
-                self._instance,
-            )
-
-        # If is not empty or an Unix socket, then do check TCP/SSL
-        if url and url.find("unix:") == -1:
+        # If is a TCP connection, then do check TCP/SSL
+        if tcpConnection:
             # Check if URL is valid
             if not (
                 url.find("tcp:") == 0
