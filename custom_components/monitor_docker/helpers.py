@@ -70,9 +70,8 @@ from .const import (
     DOCKER_STATS_MEMORY_PERCENTAGE,
     DOMAIN,
     PRECISION,
+    VERSION,
 )
-
-VERSION = "1.20b3"
 
 _LOGGER = logging.getLogger(__name__)
 

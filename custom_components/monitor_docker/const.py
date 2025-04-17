@@ -11,6 +11,7 @@ DOMAIN = "monitor_docker"
 API = "api"
 CONFIG = "config"
 CONTAINER = "container"
+VERSION = "1.20b3"
 
 CONF_CERTPATH = "certpath"
 CONF_CONTAINERS = "containers"
