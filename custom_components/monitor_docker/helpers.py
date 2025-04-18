@@ -1675,7 +1675,7 @@ class DockerContainerEntity(Entity):
         container_info = container.get_info()
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{instance}_container_{cname}")},
-            name=cname,
+            name=cname.capitalize(),
             manufacturer="Docker",
             model="Docker Container",
             entry_type=DeviceEntryType.SERVICE,
