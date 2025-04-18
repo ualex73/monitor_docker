@@ -95,13 +95,6 @@ async def async_setup_platform(
                 "Service restart failed, container '%s' is not configured", cname
             )
 
-    def find_rename(d: dict[str, str], item: str) -> str:
-        for k in d:
-            if re.match(k, item):
-                return d[k]
-
-        return item
-
     if discovery_info is None:
         return
 
