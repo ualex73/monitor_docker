@@ -11,6 +11,9 @@ from typing import Any, Callable
 
 import aiodocker
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
+from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.entity import Entity
 import homeassistant.util.dt as dt_util
 from dateutil import parser, relativedelta
 from homeassistant.const import (
@@ -105,144 +108,170 @@ class DockerAPI:
         self._subscribers: list[Callable] = []
         self._api: aiodocker.Docker = None
 
+        self._tcp_connector = None
+        self._tcp_session = None
+        self._tcp_ssl_context = None
+
         _LOGGER.debug("[%s]: Helper version: %s", self._instance, VERSION)
 
-        self._interval: int = config[CONF_SCAN_INTERVAL].seconds
+        self._interval: int = config[CONF_SCAN_INTERVAL]
         self._retry_interval: int = config[CONF_RETRY]
         _LOGGER.debug(
-            "[%s] CONF_SCAN_INTERVAL=%d, RETRY=%", self._interval, self._retry_interval
+            "[%s]: CONF_SCAN_INTERVAL=%d, RETRY=%d",
+            self._instance,
+            self._interval,
+            self._retry_interval,
         )
 
-    async def init(self, startCount=0):
-
+    #############################################################
+    async def init(self, startCount: int = 0):
         # Set to None when called twice, etc
         self._api = None
 
-        try:
-            # Try to fix unix:// to unix:/// (3 are required by aiodocker)
-            url: str = self._config[CONF_URL]
-            if (
-                url is not None
-                and url.find("unix://") == 0
-                and url.find("unix:///") == -1
-            ):
-                url = url.replace("unix://", "unix:///")
+        _LOGGER.debug("[%s]: DockerAPI init()", self._instance)
 
-            # When we reconnect with tcp, we should delay - docker is maybe not fully ready
-            if startCount > 0 and url is not None and url.find("unix:") != 0:
-                await asyncio.sleep(5)
+        # Get URL
+        url: str = self._config[CONF_URL]
 
-            # Check if it is a tcp connection or not
-            tcpConnection = False
+        # HA sometimes makes the url="", which aiodocker does not like
+        if url is not None and url == "":
+            url = None
 
-            # Remove Docker environment variables
-            os.environ.pop("DOCKER_TLS_VERIFY", None)
-            os.environ.pop("DOCKER_CERT_PATH", None)
+        # Try to fix unix:// to unix:/// (3 are required by aiodocker)
+        if url is not None and url.find("unix://") == 0 and url.find("unix:///") == -1:
+            url = url.replace("unix://", "unix:///")
 
-            # Setup Docker parameters
-            connector = None
-            session = None
-            ssl_context = None
+        # When we reconnect with tcp, we should delay - docker is maybe not fully ready
+        if startCount > 0 and url is not None and url.find("unix:") != 0:
+            await asyncio.sleep(5)
 
-            if url is not None:
-                _LOGGER.debug("%s: Docker URL is '%s'", self._instance, url)
-            else:
-                _LOGGER.debug(
-                    "%s: Docker URL is auto-detect (most likely using 'unix://var/run/docker.socket')",
-                    self._instance,
-                )
+        # Remove Docker environment variables
+        os.environ.pop("DOCKER_TLS_VERIFY", None)
+        os.environ.pop("DOCKER_CERT_PATH", None)
 
-            # If is not empty or an Unix socket, then do check TCP/SSL
-            if url is not None and url.find("unix:") == -1:
+        # Setup Docker parameters
+        self._tcp_connector = None
+        self._tcp_session = None
+        self._tcp_ssl_context = None
 
-                # Check if URL is valid
-                if not (
-                    url.find("tcp:") == 0
-                    or url.find("http:") == 0
-                    or url.find("https:") == 0
-                ):
-                    raise ValueError(
-                        f"[{self._instance}] Docker URL '{url}' does not start with tcp:, http: or https:"
-                    )
-
-                if self._config[CONF_CERTPATH] and url.find("http:") == 0:
-                    # fixup URL and warn
-                    _LOGGER.warning(
-                        "[%s] Docker URL '%s' should be https instead of http when using certificate path",
-                        self._instance,
-                        url,
-                    )
-                    url = url.replace("http:", "https:")
-
-                if self._config[CONF_CERTPATH] and url.find("tcp:") == 0:
-                    # fixup URL and warn
-                    _LOGGER.warning(
-                        "[%s] Docker URL '%s' should be https instead of tcp when using certificate path",
-                        self._instance,
-                        url,
-                    )
-                    url = url.replace("tcp:", "https:")
-
-                if self._config[CONF_CERTPATH]:
-                    _LOGGER.debug(
-                        "[%s]: Docker certification path is '%s' SSL/TLS will be used",
-                        self._instance,
-                        self._config[CONF_CERTPATH],
-                    )
-
-                    # Create our SSL context object
-                    ssl_context = await self._hass.async_add_executor_job(
-                        self._docker_ssl_context
-                    )
-
-                # Setup new TCP connection, otherwise timeout takes toooo long
-                connector = TCPConnector(ssl=ssl_context)
-                session = ClientSession(
-                    connector=connector,
-                    timeout=ClientTimeout(
-                        connect=5,
-                        sock_connect=5,
-                        total=10,
-                    ),
-                )
-
-            # Initiate the aiodocker instance now
-            self._api = aiodocker.Docker(
-                url=url, connector=connector, session=session, ssl_context=ssl_context
-            )
-
-        except Exception as err:
-            exc_info = True if str(err) == "" else False
-            _LOGGER.error(
-                "[%s]: Can not connect to Docker API (%s)",
+        if url is not None:
+            _LOGGER.debug("[%s]: Docker URL is '%s'", self._instance, url)
+        else:
+            _LOGGER.debug(
+                "[%s]: Docker URL is auto-detect (most likely using 'unix://var/run/docker.socket')",
                 self._instance,
-                str(err),
-                exc_info=exc_info,
             )
-            return
 
-        versionInfo = await self._api.version()
-        version: str | None = versionInfo.get("Version", None)
+        # If is not empty or an Unix socket, then do check TCP/SSL
+        if url and url.find("unix:") == -1:
+            # Check if URL is valid
+            if not (
+                url.find("tcp:") == 0
+                or url.find("http:") == 0
+                or url.find("https:") == 0
+            ):
+                raise ValueError(
+                    f"[{self._instance}] Docker URL '{url}' does not start with tcp:, http: or https:"
+                )
 
-        # Pre 19.03 support memory calculation is dropped
-        _LOGGER.debug("[%s]: Docker version: %s", self._instance, version)
+            if self._config[CONF_CERTPATH] and url.find("http:") == 0:
+                # fixup URL and warn
+                _LOGGER.warning(
+                    "[%s] Docker URL '%s' should be https instead of http when using certificate path",
+                    self._instance,
+                    url,
+                )
+                url = url.replace("http:", "https:")
 
-        # Start task to monitor events of create/delete/start/stop
-        self._tasks["events"] = asyncio.create_task(self._run_docker_events())
+            if self._config[CONF_CERTPATH] and url.find("tcp:") == 0:
+                # fixup URL and warn
+                _LOGGER.warning(
+                    "[%s] Docker URL '%s' should be https instead of tcp when using certificate path",
+                    self._instance,
+                    url,
+                )
+                url = url.replace("tcp:", "https:")
 
-        # Start task to monitor total/running containers
-        self._tasks["info"] = asyncio.create_task(self._run_docker_info())
+            if self._config[CONF_CERTPATH]:
+                _LOGGER.debug(
+                    "[%s]: Docker certification path is '%s' SSL/TLS will be used",
+                    self._instance,
+                    self._config[CONF_CERTPATH],
+                )
+
+                # Create our SSL context object
+                self._tcp_ssl_context = await self._hass.async_add_executor_job(
+                    self._docker_ssl_context
+                )
+
+            # Setup new TCP connection, otherwise timeout takes toooo long
+            self._tcp_connector = TCPConnector(ssl=self._tcp_ssl_context)
+            self._tcp_session = ClientSession(
+                connector=self._tcp_connector,
+                timeout=ClientTimeout(
+                    connect=5,
+                    sock_connect=5,
+                    total=10,
+                ),
+            )
+
+        try:
+            # Initiate the aiodocker instance now. Could raise an exception
+            self._api = aiodocker.Docker(
+                url=url,
+                connector=self._tcp_connector,
+                session=self._tcp_session,
+                ssl_context=self._tcp_ssl_context,
+            )
+
+            versionInfo = await self._api.version()
+            version: str | None = versionInfo.get("Version", None)
+
+            # Pre 19.03 support memory calculation is dropped
+            _LOGGER.debug("[%s]: Docker version: %s", self._instance, version)
+        except aiodocker.exceptions.DockerError as err:
+            _LOGGER.error(
+                "[%s]: Docker API connection failed: %s", self._instance, str(err)
+            )
+            raise ConfigEntryAuthFailed from err
+        except Exception:
+            raise
 
         # Get the list of containers to monitor
         containers = await self._api.containers.list(all=True)
 
+        # We only store names, we do not initialize them. This happens in run()
         for container in containers or []:
             # Determine name from Docker API, it contains an array with a slash
             cname: str = container._container["Names"][0][1:]
 
+            # Add container name to the list
+            self._containers[cname] = None
+
+    #############################################################
+    async def run(self):
+
+        _LOGGER.debug("[%s]: DockerAPI run()", self._instance)
+
+        # Start task to monitor events of create/delete/start/stop
+        if "events" not in self._tasks:
+            self._tasks["events"] = asyncio.create_task(self._run_docker_events())
+
+        # Start task to monitor total/running containers
+        if "info" not in self._tasks:
+            self._tasks["info"] = asyncio.create_task(self._run_docker_info())
+
+        # Loop through containers and do it
+        for cname in self._containers:
+
+            # Skip already initialized containers
+            if self._containers[cname]:
+                continue
+
             # We will monitor all containers, including excluded ones.
             # This is needed to get total CPU/Memory usage.
-            _LOGGER.debug("[%s] %s: Container Monitored", self._instance, cname)
+
+            _LOGGER.debug("[%s] %s: Container monitored", self._instance, cname)
 
             # Create our Docker Container API
             self._containers[cname] = DockerContainerAPI(
@@ -254,6 +283,11 @@ class DockerAPI:
 
         self._hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self._monitor_stop)
 
+    #############################################################
+    async def load(self):
+
+        _LOGGER.debug("[%s]: DockerAPI load()", self._instance)
+
         for component in COMPONENTS:
             load_platform(
                 self._hass,
@@ -262,6 +296,43 @@ class DockerAPI:
                 {CONF_NAME: self._instance},
                 self._config,
             )
+
+    #############################################################
+    async def destroy(self) -> None:
+        """Destroy the DockerAPI and its containers."""
+
+        # Cancel all main tasks
+        for key in self._tasks:
+            try:
+                _LOGGER.debug("[%s]: Cancelling task '%s'", self._instance, key)
+                result = self._tasks[key].cancel()
+                _LOGGER.debug(
+                    "[%s]: Cancelled task '%s' result=%s", self._instance, key, result
+                )
+            except Exception as err:
+                _LOGGER.error(
+                    "[%s]: Cancelling task '%s' FAILED '%s'",
+                    self._instance,
+                    key,
+                    str(err),
+                )
+                pass
+
+        # Cancel the containers
+
+        for container in self._containers.values():
+            _LOGGER.debug(
+                "[%s] %s: Container cancelled", self._instance, container._name
+            )
+            await container.destroy()
+            # TBD clear container from list?
+
+        # Close session if initialized
+        if self._tcp_session:
+            self._tcp_session.detach()
+
+        # Clear api value
+        # self._api = None
 
     #############################################################
     def _docker_ssl_context(self) -> ssl.SSLContext | None:
@@ -292,7 +363,6 @@ class DockerAPI:
 
     #############################################################
     async def _reconnectx(self):
-
         while True:
             _LOGGER.debug("[%s] Reconnecting", self._instance)
 
@@ -620,7 +690,6 @@ class DockerAPI:
         self._dockerStopped = False
 
         while True:
-
             error = True
 
             try:
@@ -654,6 +723,11 @@ class DockerAPI:
 
                 # Now go through all containers and get the cpu/memory stats
                 for container in self._containers.values():
+                    if container is None:
+                        _LOGGER.warning(
+                            "[%s]: run_docker_info container is not yet initilized",
+                            self._instance,
+                        )
                     try:
                         info = container.get_info()
                         if info.get(CONTAINER_INFO_STATE) == "running":
@@ -811,6 +885,10 @@ class DockerAPI:
     def get_info(self) -> dict[str, Any]:
         return self._info
 
+    #############################################################
+    def get_url(self) -> str:
+        return self._config[CONF_URL]
+
 
 #################################################################
 class DockerContainerAPI:
@@ -828,7 +906,7 @@ class DockerContainerAPI:
         self._instance: str = config[CONF_NAME]
         self._memChange: int = config[CONF_MEMORYCHANGE]
         self._name = cname
-        self._interval: int = config[CONF_SCAN_INTERVAL].seconds
+        self._interval: int = config[CONF_SCAN_INTERVAL]
         self._retry_interval: int = config[CONF_RETRY]
         self._busy = False
         self._atInit = atInit
@@ -851,6 +929,9 @@ class DockerContainerAPI:
         # During start-up we will wait on container attachment,
         # preventing concurrency issues the main HA loop (we are
         # othside that one with our threads)
+
+        _LOGGER.debug("[%s] %s: DockerContainerAPI init()", self._instance, self._name)
+
         if self._atInit:
             try:
                 self._container = await self._api.containers.get(self._name)
@@ -863,7 +944,7 @@ class DockerContainerAPI:
                     str(err),
                     exc_info=exc_info,
                 )
-                return
+                return  # Could be necessary to do something more here
 
             self._task = asyncio.create_task(self._run())
 
@@ -899,11 +980,34 @@ class DockerContainerAPI:
         return True
 
     #############################################################
+    async def destroy(self) -> None:
+
+        if self._task:
+            try:
+                _LOGGER.debug("[%s] %s: Cancelling task", self._instance, self._name)
+                result = self._task.cancel()
+                _LOGGER.debug(
+                    "[%s] %s: Cancelled task result=%s",
+                    self._instance,
+                    self._name,
+                    result,
+                )
+            except Exception as err:
+                _LOGGER.error(
+                    "[%s] %s: Cancelling task FAILED '%s'",
+                    self._instance,
+                    self._name,
+                    str(err),
+                )
+                pass
+        else:
+            _LOGGER.error("[%s] %s: No task to cancel", self._instance, self._name)
+
+    #############################################################
     async def _run(self) -> None:
         """Loop to gather container info/stats."""
 
         while True:
-
             sendNotify = True
             error = True
 
@@ -1491,6 +1595,11 @@ class DockerContainerAPI:
         return self._stats
 
     #############################################################
+    def get_api(self) -> DockerAPI:
+        """Return the container stats."""
+        return self._api
+
+    #############################################################
     def register_callback(self, callback: Callable, variable: str):
         """Register callback from sensor/switch/button."""
         if callback not in self._subscribers:
@@ -1541,4 +1650,23 @@ class DockerContainerAPI:
 
         return "{} {}".format(
             delta.seconds, "second" if delta.seconds == 1 else "seconds"
+        )
+
+
+#################################################################
+class DockerContainerEntity(Entity):
+    """Generic entity functions."""
+
+    def __init__(
+        self, container: DockerContainerAPI, instance: str, cname: str
+    ) -> None:
+        """Initialize the base for Container entities."""
+        container_info = container.get_info()
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, f"{instance}_container_{cname}")},
+            name=cname,
+            manufacturer="Docker",
+            model="Docker Container",
+            entry_type=DeviceEntryType.SERVICE,
+            via_device=(DOMAIN, f"{instance}_{container._config[CONF_URL]}"),
         )

@@ -6,7 +6,8 @@ import re
 from typing import Any
 
 import voluptuous as vol
-from custom_components.monitor_docker.helpers import DockerAPI, DockerContainerAPI
+
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.button import ENTITY_ID_FORMAT, ButtonEntity
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
@@ -22,21 +23,34 @@ from .const import (
     ATTR_SERVER,
     CONF_CONTAINERS,
     CONF_CONTAINERS_EXCLUDE,
-    CONF_PREFIX,
     CONF_RENAME,
-    CONF_RENAME_ENITITY,
     CONF_BUTTONENABLED,
-    CONF_BUTTONNAME,
     CONFIG,
     CONTAINER,
     CONTAINER_INFO_STATE,
     DOMAIN,
     SERVICE_RESTART,
 )
+from .helpers import DockerAPI, DockerContainerAPI, DockerContainerEntity
+
 
 SERVICE_RESTART_SCHEMA = vol.Schema({ATTR_NAME: cv.string, ATTR_SERVER: cv.string})
 
 _LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Sensor set up for Hass.io config entry."""
+    await async_setup_platform(
+        hass=hass,
+        config=config_entry.data,
+        async_add_entities=async_add_entities,
+        discovery_info={"name": config_entry.data[CONF_NAME]},
+    )
 
 
 async def async_setup_platform(
@@ -97,11 +111,6 @@ async def async_setup_platform(
     api = hass.data[DOMAIN][name][API]
     config = hass.data[DOMAIN][name][CONFIG]
 
-    # Set or overrule prefix
-    prefix = name
-    if config[CONF_PREFIX]:
-        prefix = config[CONF_PREFIX]
-
     # Don't create any butoon if disabled
     if config[CONF_BUTTONENABLED] == False:
         _LOGGER.debug("[%s]: Button(s) are disabled", instance)
@@ -132,20 +141,11 @@ async def async_setup_platform(
             ):
                 _LOGGER.debug("[%s] %s: Adding component Button", instance, cname)
 
-                # Only force rename of entityid is requested, to not break backwards compatibility
-                alias_entityid = cname
-                if config[CONF_RENAME_ENITITY]:
-                    alias_entityid = find_rename(config[CONF_RENAME], cname)
-
                 buttons.append(
                     DockerContainerButton(
                         api.get_container(cname),
                         instance=instance,
-                        prefix=prefix,
                         cname=cname,
-                        alias_entityid=alias_entityid,
-                        alias_name=find_rename(config[CONF_RENAME], cname),
-                        name_format=config[CONF_BUTTONNAME],
                     )
                 )
             else:
@@ -165,38 +165,26 @@ async def async_setup_platform(
 
     return True
 
+
 #################################################################
-class DockerContainerButton(ButtonEntity):
+class DockerContainerButton(ButtonEntity, DockerContainerEntity):
     def __init__(
-        self, 
+        self,
         container: DockerContainerAPI,
         instance: str,
-        prefix: str,
         cname: str,
-        alias_entityid: str,
-        alias_name: str,
-        name_format: str,
     ):
+        super().__init__(container, instance, cname)
+
         self._container = container
         self._instance = instance
-        self._prefix = prefix
         self._cname = cname
         self._state = False
-        self._entity_id = ENTITY_ID_FORMAT.format(
-            slugify(self._prefix + "_" + self._cname + "_restart")
+        self._attr_unique_id = ENTITY_ID_FORMAT.format(
+            slugify(f"{self._instance}_{self._cname}_restart")
         )
-        self._name = name_format.format(name=alias_name)
+        self._attr_name = f"{self._instance} {self._cname} Restart"
         self._removed = False
-
-    @property
-    def entity_id(self) -> str:
-        """Return the entity id of the button."""
-        return self._entity_id
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return self._name
 
     @property
     def should_poll(self) -> bool:
@@ -213,7 +201,7 @@ class DockerContainerButton(ButtonEntity):
     @property
     def is_on(self) -> bool:
         return self._state
-                                 
+
     async def async_press(self, **kwargs: Any) -> None:
         await self._container.restart()
         self._state = False
