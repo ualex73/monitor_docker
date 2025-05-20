@@ -1,7 +1,22 @@
 {
     "services": {
+        "reload": {
+            "description": "Recharger toutes les entités monitor_docker.",
+            "name": "Recharger"
+        },
         "restart": {
-            "name": "Red\u00e9marrer"
+            "description": "Redémarre le container, the container doit être configuré dans monitor_docker.",
+            "fields": {
+                "name": {
+                    "description": "Nom du container.",
+                    "name": "Nom"
+                },
+                "server": {
+                    "description": "Nom du serveur, Name of the server, comme indiqué dans la configuration. Requis uniquement si vous avez plusieurs configurations d'hôte Docker.",
+                    "name": "Serveur"
+                }
+            },
+            "name": "Redémarrer"
         }
     }
 }
