@@ -107,6 +107,10 @@ monitor_docker:
       - status
       - memory
 ```
+Important NOTE: The rename functionality works with regular expression. If you got containers with roughly the same name, it could match the wrong one. Examples:
+ appdaemon: AppDaemon - Will match anything with "appdaemon"
+ ^appdaemon: AppDaemon - Will match if it starts with "appdaemon"
+ ^appdaemon$: AppDaemon - Only match if it exactly matches "appdaemon", thus "appdaemon-2" will not match
 
 #### Configuration variables
 
