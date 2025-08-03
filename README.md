@@ -2,10 +2,6 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
-## Home Assistant 2024.8.0
-
-Home Assistant 2024.8.0 is not compatible with monitor_docker, please upgrade to Home Assistant 2024.8.1
-
 ## About
 
 This repository contains the Monitor Docker component I developed for monitoring my Docker environment from [Home-Assistant](https://www.home-assistant.io). It is inspired by the Sander Huisman [Docker Monitor](https://github.com/Sanderhuisman/docker_monitor), where I switched mainly from threads to asyncio and added my own wishes/functionality. Feel free to use the component and report bugs if you find them. If you want to contribute, please report a bug or pull request, and I will reply as soon as possible.
@@ -108,9 +104,11 @@ monitor_docker:
       - memory
 ```
 Important NOTE: The rename functionality works with regular expression. If you got containers with roughly the same name, it could match the wrong one. Examples:
- appdaemon: AppDaemon - Will match anything with "appdaemon"
- ^appdaemon: AppDaemon - Will match if it starts with "appdaemon"
- ^appdaemon$: AppDaemon - Only match if it exactly matches "appdaemon", thus "appdaemon-2" will not match
+```
+appdaemon: AppDaemon - Will match anything with "appdaemon" 
+^appdaemon: AppDaemon - Will match if it starts with "appdaemon" 
+^appdaemon$: AppDaemon - Only match if it exactly matches "appdaemon", thus "appdaemon-2" will not match
+```
 
 #### Configuration variables
 
