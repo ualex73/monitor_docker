@@ -222,7 +222,7 @@ services:
 ...
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      # The files need to be named "cert.pem" and "key.pem"
+      # The files need to be named "ca.pem", "cert.pem" and "key.pem"
       - ./certs:/certs
     environment:
       - DOCKER_TLS_VERIFY=1
