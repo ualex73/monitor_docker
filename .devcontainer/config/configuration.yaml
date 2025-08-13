@@ -1,0 +1,34 @@
+homeassistant:
+  name: development
+  unit_system: metric
+  temperature_unit: C
+  country: NL
+  time_zone: Europe/Amsterdam
+  latitude: 52.377956
+  longitude: 4.897070
+  elevation: 0
+
+default_config:
+
+logger:
+  default: info
+  logs:
+    custom_components.monitor_docker: debug
+# If you need to debug uncommment the line below (doc: https://www.home-assistant.io/integrations/debugpy/)
+# debugpy:
+
+monitor_docker:
+  - name: Docker
+    scan_interval: 30
+    monitored_conditions:
+      - containers_running
+      - containers_total
+      - containers_1cpu_percentage
+      - containers_memory
+      - containers_memory_percentage
+      - state
+      - status
+      - uptime
+      - 1cpu_percentage
+      - memory
+    switchenabled: false
