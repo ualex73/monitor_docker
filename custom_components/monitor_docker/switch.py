@@ -184,16 +184,10 @@ class DockerContainerSwitch(SwitchEntity, DockerContainerEntity):
         )
         self._name = self._cname.capitalize()
         self._attr_has_entity_name = True
+        self._attr_name = None
+
         self.entity_id = f"switch.{self._instance}_{self._cname}"
         self._removed = False
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        # Return None, as this is the main entity for the device. The friendly name
-        # will then be equal to the device name ('Home-Assistant') instead of a combination
-        # of the device name and entity name ('Home-Assistant Home-Assistant')
-        return None
 
     @property
     def should_poll(self) -> bool:
