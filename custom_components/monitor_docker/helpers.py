@@ -34,11 +34,13 @@ from .const import (
     CONF_CERTPATH,
     CONF_MEMORYCHANGE,
     CONF_PRECISION_CPU,
+    CONF_PRECISION_DISK_MB,
     CONF_PRECISION_MEMORY_MB,
     CONF_PRECISION_MEMORY_PERCENTAGE,
     CONF_PRECISION_NETWORK_KB,
     CONF_PRECISION_NETWORK_MB,
     CONF_RETRY,
+    CONF_VERSION,
     CONTAINER,
     CONTAINER_INFO_HEALTH,
     CONTAINER_INFO_IMAGE,
@@ -209,7 +211,11 @@ class DockerAPI:
 
             # Initiate the aiodocker instance now
             self._api = aiodocker.Docker(
-                url=url, connector=connector, session=session, ssl_context=ssl_context
+                url=url,
+                connector=connector,
+                session=session,
+                ssl_context=ssl_context,
+                api_version=self._config[CONF_VERSION],
             )
 
         except Exception as err:

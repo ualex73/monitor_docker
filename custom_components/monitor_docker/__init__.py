@@ -37,6 +37,7 @@ from .const import (
     CONF_SWITCHNAME,
     CONF_BUTTONENABLED,
     CONF_BUTTONNAME,
+    CONF_VERSION,
     CONFIG,
     CONTAINER_INFO_ALLINONE,
     DEFAULT_NAME,
@@ -59,6 +60,7 @@ DOCKER_SCHEMA = vol.Schema(
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_PREFIX, default=""): cv.string,
         vol.Optional(CONF_URL, default=None): vol.Any(cv.string, None),
+        vol.Optional(CONF_VERSION, default="auto"): cv.string,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): cv.time_period,
         vol.Optional(CONF_MONITORED_CONDITIONS, default=[]): vol.All(
             cv.ensure_list,

@@ -31,6 +31,7 @@ CONF_SWITCHENABLED = "switchenabled"
 CONF_SWITCHNAME = "switchname"
 CONF_BUTTONENABLED = "buttonenabled"
 CONF_BUTTONNAME = "buttonname"
+CONF_VERSION = "version"
 
 DEFAULT_NAME = "Docker"
 DEFAULT_RETRY = 60
