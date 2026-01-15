@@ -77,13 +77,13 @@ _LOGGER = logging.getLogger(__name__)
 def toKB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to kBytes."""
     precision = None if precision == 0 else precision
-    return round(value / (1024 ** 1), precision)
+    return round(value / (1024**1), precision)
 
 
 def toMB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to MBytes."""
     precision = None if precision == 0 else precision
-    return round(value / (1024 ** 2), precision)
+    return round(value / (1024**2), precision)
 
 
 #################################################################
@@ -1285,6 +1285,25 @@ class DockerContainerAPI:
                         network_new["read"] - self._network_old["read"]
                     ).total_seconds()
 
+                    # Speed cannot be below zero
+                    if tx < 0:
+                        _LOGGER.warning(
+                            "[%s] %s: network tx became negative (%s)",
+                            self._instance,
+                            self._name,
+                            tx,
+                        )
+                        tx = 0
+
+                    if rx < 0:
+                        _LOGGER.warning(
+                            "[%s] %s: network rx became negative (%s)",
+                            self._instance,
+                            self._name,
+                            rx,
+                        )
+                        rx = 0
+
                     # Calculate speed, also convert to kByte/sec
                     network_stats["speed_tx"] = toKB(
                         float(tx) / tim, self._config[CONF_PRECISION_NETWORK_KB]
@@ -1310,6 +1329,7 @@ class DockerContainerAPI:
                     self._name,
                     str(err),
                 )
+
                 if "networks" in raw:
                     _LOGGER.error(
                         "[%s] %s: Raw 'networks' %s",
