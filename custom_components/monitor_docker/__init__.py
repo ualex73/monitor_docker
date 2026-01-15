@@ -23,6 +23,7 @@ from .const import (
     CONF_CONTAINERS_EXCLUDE,
     CONF_MEMORYCHANGE,
     CONF_PRECISION_CPU,
+    CONF_PRECISION_DISK_MB,
     CONF_PRECISION_MEMORY_MB,
     CONF_PRECISION_MEMORY_PERCENTAGE,
     CONF_PRECISION_NETWORK_KB,
@@ -80,6 +81,7 @@ DOCKER_SCHEMA = vol.Schema(
         vol.Optional(CONF_RETRY, default=DEFAULT_RETRY): cv.positive_int,
         vol.Optional(CONF_MEMORYCHANGE, default=100): cv.positive_int,
         vol.Optional(CONF_PRECISION_CPU, default=PRECISION): cv.positive_int,
+        vol.Optional(CONF_PRECISION_DISK_MB, default=PRECISION): cv.positive_int,
         vol.Optional(CONF_PRECISION_MEMORY_MB, default=PRECISION): cv.positive_int,
         vol.Optional(
             CONF_PRECISION_MEMORY_PERCENTAGE, default=PRECISION
@@ -118,8 +120,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 if entry[CONF_RETRY] == 0:
                     raise
                 else:
-                    _LOGGER.error("Failed Docker connect: %s", str(err))
-                    _LOGGER.error("Retry in %d seconds", entry[CONF_RETRY])
+                    _LOGGER.error(
+                        f"Failed Docker connect: {err}", stack_info=True, exc_info=True
+                    )
+                    _LOGGER.error(f"Retry in {entry[CONF_RETRY]} seconds")
                     await asyncio.sleep(entry[CONF_RETRY])
 
             startCount += 1

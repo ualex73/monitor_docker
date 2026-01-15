@@ -160,6 +160,7 @@ class DockerAPI:
                     url.find("tcp:") == 0
                     or url.find("http:") == 0
                     or url.find("https:") == 0
+                    or url.find("ssh:") == 0
                 ):
                     raise ValueError(
                         f"[{self._instance}] Docker URL '{url}' does not start with tcp:, http: or https:"
@@ -1061,6 +1062,7 @@ class DockerContainerAPI:
         stats["memory"] = {}
         stats["network"] = {}
         stats["read"] = {}
+        stats["disk"] = {}
 
         # Get container stats, only interested in [0]
         rawarr = await self._container.stats(stream=False)
@@ -1333,10 +1335,40 @@ class DockerContainerAPI:
                     )
                     self._info[CONTAINER_INFO_NETWORK_AVAILABLE] = False
 
+        # Gather disk information
+        disk_stats: dict[str, float | None] = {}
+
+        try:
+            disk_stats["read"] = None
+            disk_stats["write"] = None
+
+            if (
+                "blkio_stats" in raw
+                and "io_service_bytes_recursive" in raw["blkio_stats"]
+            ):
+                for xarr in raw["blkio_stats"]["io_service_bytes_recursive"]:
+                    if "op" in xarr and xarr["op"] == "read":
+                        disk_stats["read"] = toMB(
+                            xarr["value"], self._config[CONF_PRECISION_DISK_MB]
+                        )
+                    if "op" in xarr and xarr["op"] == "write":
+                        disk_stats["write"] = toMB(
+                            xarr["value"], self._config[CONF_PRECISION_DISK_MB]
+                        )
+
+        except Exception as err:
+            _LOGGER.error(
+                "[%s] %s: Can not determine disk usage for container (%s)",
+                self._instance,
+                self._name,
+                str(err),
+            )
+
         # All information collected
         stats["cpu"] = cpu_stats
         stats["memory"] = memory_stats
         stats["network"] = network_stats
+        stats["disk"] = disk_stats
 
         stats[CONTAINER_STATS_CPU_PERCENTAGE] = cpu_stats.get("total")
         if "online_cpus" in cpu_stats and cpu_stats.get("total") is not None:
