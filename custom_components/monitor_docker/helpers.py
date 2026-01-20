@@ -80,13 +80,13 @@ _LOGGER = logging.getLogger(__name__)
 def toKB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to kBytes."""
     precision = None if precision == 0 else precision
-    return round(value / (1024 ** 1), precision)
+    return round(value / (1024**1), precision)
 
 
 def toMB(value: float, precision: int = PRECISION) -> float:
     """Converts bytes to MBytes."""
     precision = None if precision == 0 else precision
-    return round(value / (1024 ** 2), precision)
+    return round(value / (1024**2), precision)
 
 
 #################################################################
@@ -157,10 +157,19 @@ class DockerAPI:
         if url is not None:
             _LOGGER.debug("[%s]: Docker URL is '%s'", self._instance, url)
         else:
-            _LOGGER.debug(
-                "[%s]: Docker URL is auto-detect (most likely using 'unix://var/run/docker.socket')",
-                self._instance,
-            )
+            # Try to auto-detect the Docker socket
+            _sock_search_paths = [
+                Path("/run/docker.sock"),
+                Path("/var/run/docker.sock"),
+                Path.home() / ".docker/run/docker.sock",
+            ]
+
+            for sockpath in _sock_search_paths:
+                if sockpath.is_socket():
+                    url = "unix://" + str(sockpath)
+                    break
+
+            _LOGGER.debug("%s: Docker URL is auto-detect as '%s'", self._instance, url)
 
         # If is not empty or an Unix socket, then do check TCP/SSL
         if url and url.find("unix:") == -1:
