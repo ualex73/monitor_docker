@@ -301,14 +301,14 @@ class DockerContainerSensor(SensorEntity, DockerContainerEntity):
             self._attr_unique_id = ENTITY_ID_FORMAT.format(
                 slugify(f"{self._instance}_{self._cname}_allinone")
             )
-            self._attr_name = f"{self._instance} {self._cname} AllInOne".strip()
+            self._attr_name = "AllInOne"
+            self.entity_id = f"sensor.{self._instance}_{self._cname}_allinone".replace(" ", "")
         else:
             self._attr_unique_id = ENTITY_ID_FORMAT.format(
                 slugify(f"{self._instance}_{cname}_{self.entity_description.name}")
             )
-            self._attr_name = (
-                f"{self._instance} {self._cname} {self.entity_description.name}".strip()
-            )
+            self._attr_name = self.entity_description.name
+            self.entity_id = f"sensor.{self._instance}_{self._cname}_{self.entity_description.name}".replace(" ", "")
 
         self._state = None
         self._state_extra = None

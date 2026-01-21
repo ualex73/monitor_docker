@@ -182,13 +182,12 @@ class DockerContainerSwitch(SwitchEntity, DockerContainerEntity):
         self._attr_unique_id: str = ENTITY_ID_FORMAT.format(
             slugify(f"{self._instance}_{self._cname}")
         )
-        self._name = f"{self._instance} {self._cname}"
-        self._removed = False
+        self._name = self._cname.capitalize()
+        self._attr_has_entity_name = True
+        self._attr_name = None
 
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return self._name
+        self.entity_id = f"switch.{self._instance}_{self._cname}"
+        self._removed = False
 
     @property
     def should_poll(self) -> bool:
