@@ -1394,12 +1394,10 @@ class DockerContainerAPI:
                         )
 
         except Exception as err:
-            _LOGGER.error(
-                "[%s] %s: Can not determine disk usage for container (%s)",
-                self._instance,
-                self._name,
-                str(err),
-            )
+            #_LOGGER.error( "[%s] %s: Can not determine disk usage for container (%s)", self._instance, self._name, str(err),)
+            # Seems if no disk read/write is done, we get NoneType here
+            disk_stats["read"] = None
+            disk_stats["write"] = None
 
         # All information collected
         stats["cpu"] = cpu_stats
