@@ -118,7 +118,7 @@ appdaemon: AppDaemon - Will match anything with "appdaemon"
 | url                         | string         (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `http://ip:2375`. Do NOT add a slash add the end, this will invalidate the URL. For TLS support see the Q&A section. SSH is not supported. |
 | scan_interval               | time_period    (Optional)  | Update interval. Defaults to 10 seconds.                              |
 | retry                       | time_period    (Optional)  | Retry interval when a TCP error is detected. Defaults to 60 seconds.  |
-| certpath                    | string         (Optional)  | If a TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be `cert.pem` and `key.pem`|
+| certpath                    | string         (Optional)  | If a TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be `ca.pem`, `cert.pem` and `key.pem`|
 | containers                  | list           (Optional)  | Array of containers to monitor. Defaults to all containers.           |
 | containers_exclude          | list           (Optional)  | Array of containers to be excluded from monitoring, when all containers are included. |
 | monitored_conditions        | list           (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
@@ -215,7 +215,7 @@ Here are some possible questions/errors with their answers.
 3. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via http://10.0.0.1:2376...)`.  
     **Answer:** You are trying to connect via TCP and most likely the remote address is unavailable. Test it with the command `docker -H tcp://10.0.0.1:2376 ps` if it works (replace `10.0.0.1` with your IP address). Also you can consult the following URL for more help: https://docs.docker.com/config/daemon/remote-access/
 4. **Question:** Is Docker TCP socket via TLS supported?  
-    **Answer:** Yes it is. You need to set the URL to e.g. `http://ip:2376` and the environment variables `DOCKER_TLS_VERIFY=1` and `DOCKER_CERT_PATH=<path to your certificates>` need to be set  
+    **Answer:** Yes it is. You need to set the URL to e.g. `tcp://ip:2376` and the per instance configurationg `certpath` need to be set  
 The following is a docker-compose example of how to set the environment variables and the volume with the certificates:
 ```
 services:
@@ -226,9 +226,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # The files need to be named "ca.pem", "cert.pem" and "key.pem"
       - ./certs:/certs
-    environment:
-      - DOCKER_TLS_VERIFY=1
-      - DOCKER_CERT_PATH=/certs
 ...
 ```
 5. **Question:** Can this integration monitor 2 or more Docker instances?  
@@ -240,11 +237,10 @@ monitor_docker:
     containers:
     ...
   - name: RemoteDocker
-    url: http://10.0.0.1:2376
+    url: tcp://10.0.0.1:2376
     containers:
     ...
-```
-*NOTE*: The integration supports multiple Docker instances, but you can only define 1 TLS configuration which is applied to all (thus you cannot mix TCP with and without TLS).  
+```  
 6. **Question:** Can create, delete or re-create a container be implemented in the integration?  
     **Answer:** The used Docker library has no easy (and safe) way to handle such functionality. Please use *docker-compose* to handle such operations. If anybody can make this fully work in a safe way, I'll be happy to merge the PR   
 7. **Question:** Can you add more security to a switch?  
