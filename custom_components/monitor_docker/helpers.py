@@ -1209,7 +1209,10 @@ class DockerContainerAPI:
                 )
                 if "cpu_stats" in raw:
                     _LOGGER.error(
-                        "[%s] %s: Raw 'cpu_stats' %s", self._name, raw["cpu_stats"]
+                        "[%s] %s: Raw 'cpu_stats' %s",
+                        self._instance,
+                        self._name,
+                        raw["cpu_stats"],
                     )
                 else:
                     _LOGGER.error(
