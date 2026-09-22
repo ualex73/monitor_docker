@@ -34,7 +34,9 @@ from .const import (
     SERVICE_RESTART,
 )
 
-SERVICE_RESTART_SCHEMA = vol.Schema({ATTR_NAME: cv.string, ATTR_SERVER: cv.string})
+SERVICE_RESTART_SCHEMA = vol.Schema(
+    {ATTR_NAME: cv.string, vol.Optional(ATTR_SERVER): cv.string}
+)
 
 _LOGGER = logging.getLogger(__name__)
 
