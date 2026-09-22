@@ -111,7 +111,8 @@ monitor_docker:
 | name                        | string         (Required)  | Client name of Docker daemon. Defaults to `Docker`.                   |
 | url                         | string         (Optional)  | Host URL of Docker daemon. Defaults to `unix://var/run/docker.sock`. Remote Docker daemon via TCP socket is also supported, use e.g. `tcp://ip:2376`. Do NOT add a slash add the end, this will invalid the URL. For TLS support see Q&A section. SSH is not supported. |
 | scan_interval               | time_period    (Optional)  | Update interval. Defaults to 10 seconds.                              |
-| certpath                    | string         (Optional)  | If TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be `cert.pem` and `key.pem`|
+| retry                       | integer        (Optional)  | Retry interval after a Docker connection error. Defaults to 60 seconds. |
+| certpath                    | string         (Optional)  | If TCP socket is used, you can define your Docker certificate path, forcing Monitor Docker to enable TLS. The filenames must be `ca.pem`, `cert.pem` and `key.pem`. |
 | containers                  | list           (Optional)  | Array of containers to monitor. Defaults to all containers.           |
 | containers_exclude          | list           (Optional)  | Array of containers to be excluded from monitoring, when all containers are included. |
 | monitored_conditions        | list           (Optional)  | Array of conditions to be monitored. Defaults to all conditions.      |
@@ -119,6 +120,8 @@ monitor_docker:
 | sensorname                  | string         (Optional)  | Sensor string to format the name used in Home Assistant. Defaults to `{name} {sensor}`, where `{name}` is the container name and `{sensor}` is e.g. Memory, Status, Network speed Up |
 | switchname                  | string         (Optional)  | Switch string to format the name used in Home Assistant. Defaults to `{name}`, where `{name}` is the container name. |
 | switchenabled               | boolean / list (Optional)  | Enable/Disable the switch entity for containers (Default: `True` Enabled switch for all containers, `False`: Disabled switch for all containers). Or specify a list of containers for which to enable switch entities. |
+| buttonname                  | string         (Optional)  | Button string to format the name used in Home Assistant. Defaults to `{name} Restart`. |
+| buttonenabled               | boolean / list (Optional)  | Enable/Disable the restart button entity for containers. Defaults to `False`, or specify a list of containers for which to enable button entities. |
 | precision_cpu               | integer        (Optional)  | Precision of CPU usage percentage (Default: 2) |
 | precision_memory_mb         | integer        (Optional)  | Precision of memory usage in MB (Default: 2) |
 | precision_memory_percentage | integer        (Optional)  | Precision of memory usage in percentage (Default: 2) |
@@ -205,8 +208,8 @@ Here are some possible questions/errors with their answers.
 3. **Error:** `aiodocker.exceptions.DockerError: DockerError(900, "Cannot connect to Docker Engine via tcp://10.0.0.1:2376...)`.  
     **Answer:** You are trying to connect via TCP and most likely the remote address is unavailable. Test it with the command `docker -H tcp://10.0.0.1:2376 ps` if it works (replace `10.0.0.1` with your IP address)
 4. **Question:** Is Docker TCP socket via TLS supported?  
-    **Answer:** Yes it is. You need to set the url to e.g. `tcp://ip:2376` and the environment variables `DOCKER_TLS_VERIFY=1` and `DOCKER_CERT_PATH=<path to your certificates>` need to be set  
-The following is a docker-compose example how to set the environment variables and the volume with the certificates:
+    **Answer:** Yes it is. Set the instance `url` to e.g. `tcp://ip:2376` and set its `certpath` to the directory containing `ca.pem`, `cert.pem` and `key.pem`.
+The following is a docker-compose example mounting the certificates into Home Assistant:
 ```
 services:
   hass:
@@ -214,11 +217,8 @@ services:
 ...
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      # The files need to be named "cert.pem" and "key.pem"
+      # The files need to be named "ca.pem", "cert.pem" and "key.pem"
       - ./certs:/certs
-    environment:
-      - DOCKER_TLS_VERIFY=1
-      - DOCKER_CERT_PATH=/certs
 ...
 ```
 5. **Question:** Can this integration monitor 2 or more Docker instances?  
@@ -234,7 +234,7 @@ monitor_docker:
     containers:
     ...
 ```
-*NOTE*: The integration supports multiple Docker instances, but you can only define 1 TLS configuration which is applied to all (thus you cannot mix TCP with and without TLS).  
+*NOTE*: TLS is configured per Docker instance, so multiple entries can use different `certpath` values or leave it empty for an unencrypted endpoint.  
 6. **Question:** Can create, delete or re-create of a container be implemented in the integration?  
     **Answer:** The used Docker library has no easy (and safe) way to handle such functionality. Please use *docker-compose* to handle such operations. If anybody can make this fully work in a safe way, I'll be happy to merge the PR   
 7. **Question:** Can you add more security to a switch?  
