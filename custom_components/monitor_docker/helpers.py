@@ -1009,13 +1009,12 @@ class DockerContainerAPI:
                 # No error, so normal interval
                 error = False
 
-            except concurrent.futures._base.CancelledError:
+            except (concurrent.futures._base.CancelledError, asyncio.CancelledError):
                 _LOGGER.debug(
-                    "[%s] %s: Container received concurrent.futures._base.CancelledError",
+                    "[%s] %s: Container task cancelled, stopping",
                     self._instance,
                     self._name,
                 )
-                pass
                 break
             except aiodocker.exceptions.DockerError as err:
                 _LOGGER.error(
@@ -1023,13 +1022,6 @@ class DockerContainerAPI:
                     self._instance,
                     self._name,
                     str(err),
-                    self._retry_interval,
-                )
-            except asyncio.exceptions.CancelledError as err:
-                _LOGGER.error(
-                    "[%s] %s: Container not available anymore (3c) CancelledError. Retry in %d seconds",
-                    self._instance,
-                    self._name,
                     self._retry_interval,
                 )
             except asyncio.TimeoutError as err:
