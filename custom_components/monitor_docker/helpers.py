@@ -343,7 +343,7 @@ class DockerAPI:
         for callback in self._subscribers:
             callback(remove=True)
 
-        self._subscriber: list[Callable] = []
+        self._subscribers.clear()
 
     #############################################################
     def register_callback(self, callback: Callable, variable: str) -> None:
@@ -1517,7 +1517,7 @@ class DockerContainerAPI:
         for callback in self._subscribers:
             callback(remove=True)
 
-        self._subscriber: list[Callable] = []
+        self._subscribers.clear()
 
     #############################################################
     async def _start(self) -> None:
