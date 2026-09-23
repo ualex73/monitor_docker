@@ -190,11 +190,16 @@ class DockerContainerSwitch(SwitchEntity):
         )
         self._name = name_format.format(name=alias_name)
         self._removed = False
+        self._attr_unique_id = slugify(f"{self._instance}_{self._cname}_switch")
 
     @property
     def entity_id(self) -> str:
         """Return the entity id of the switch."""
         return self._entity_id
+
+    @entity_id.setter
+    def entity_id(self, value: str) -> None:
+        self._entity_id = value
 
     @property
     def name(self) -> str:
