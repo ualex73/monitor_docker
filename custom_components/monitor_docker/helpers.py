@@ -33,6 +33,7 @@ from .const import (
     COMPONENTS,
     CONF_CERTPATH,
     CONF_MEMORYCHANGE,
+    CONF_MEMORY_EXCLUDE_FILE_CACHE,
     CONF_PRECISION_CPU,
     CONF_PRECISION_DISK_MB,
     CONF_PRECISION_MEMORY_MB,
@@ -1224,10 +1225,19 @@ class DockerContainerAPI:
             cache = 0
             # https://docs.docker.com/engine/reference/commandline/stats/
             if "stats" in raw["memory_stats"]:
-                if "total_inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["total_inactive_file"]
-                elif "inactive_file" in raw["memory_stats"]["stats"]:
-                    cache = raw["memory_stats"]["stats"]["inactive_file"]
+                mem_raw = raw["memory_stats"]["stats"]
+                if self._config[CONF_MEMORY_EXCLUDE_FILE_CACHE]:
+                    # Exclude all page cache (active and inactive), so usage is
+                    # memory the processes hold: cgroup v1 "total_cache"/"cache",
+                    # cgroup v2 "file".
+                    for key in ("total_cache", "file", "cache"):
+                        if key in mem_raw:
+                            cache = mem_raw[key]
+                            break
+                elif "total_inactive_file" in mem_raw:
+                    cache = mem_raw["total_inactive_file"]
+                elif "inactive_file" in mem_raw:
+                    cache = mem_raw["inactive_file"]
 
             memory_stats["usage"] = toMB(
                 raw["memory_stats"]["usage"] - cache,
