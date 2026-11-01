@@ -124,6 +124,7 @@ monitor_docker:
 | buttonenabled               | boolean / list (Optional)  | Enable/Disable the restart button entity for containers. Defaults to `False`, or specify a list of containers for which to enable button entities. |
 | precision_cpu               | integer        (Optional)  | Precision of CPU usage percentage (Default: 2) |
 | precision_memory_mb         | integer        (Optional)  | Precision of memory usage in MB (Default: 2) |
+| memory_exclude_file_cache   | boolean        (Optional)  | Exclude all file (page) cache from memory usage, not only inactive cache, so memory sensors show what the container's processes hold. Default `false` (same as `docker stats`, which subtracts only inactive file cache) |
 | precision_memory_percentage | integer        (Optional)  | Precision of memory usage in percentage (Default: 2) |
 | precision_network_kb        | integer        (Optional)  | Precision of network bandwidth in kB (Default: 2) |
 | precision_network_mb        | integer        (Optional)  | Precision of network usage in MB (Default: 2) |
